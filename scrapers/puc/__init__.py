@@ -1,0 +1,1 @@
+from .enciclopedia import PucEnciclopediaJuridicaScraper

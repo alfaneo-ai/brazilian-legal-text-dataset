@@ -1,0 +1,9 @@
+pandas~=1.2.4
+numpy~=1.19.2
+nltk==3.6.2
+beautifulsoup4==4.10.0
+requests==2.26.0
+html2text==2020.1.16
+selenium==3.141.0
+python-slugify==5.0.2
+tqdm==4.62.3

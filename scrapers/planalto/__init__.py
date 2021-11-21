@@ -1,0 +1,1 @@
+from .laws import PlanaltoLawScraper
