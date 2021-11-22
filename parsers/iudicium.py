@@ -19,35 +19,41 @@ class IudiciumParser:
     def _process_relatorio(self):
         self.work_progress.show(f'Parsing AcordaosRelatorios.json')
         input_filepath = PathUtil.join(self.rootpath, 'AcordaosRelatorios.json')
-        output_filepath = PathUtil.join(self.rootpath, 'AcordaosRelatorios.txt')
-        outfile = open(output_filepath, 'wb')
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
-                for line in chunk.texto:
-                    outfile.write(f'{line}\n'.encode())
-        outfile.close()
+                for _id, texto in zip(chunk._id, chunk.texto):
+                    oid = _id['$oid']
+                    output_filepath = PathUtil.join(self.rootpath, 'relatorio', f'{oid}.txt')
+                    outfile = open(output_filepath, 'wb')
+                    outfile.write(f'{texto}\n'.encode())
+                    outfile.close()
 
     def _process_votos(self):
         self.work_progress.show(f'Parsing AcordaosVotos.json')
         input_filepath = PathUtil.join(self.rootpath, 'AcordaosVotos.json')
-        output_filepath = PathUtil.join(self.rootpath, 'AcordaosVotos.txt')
-        outfile = open(output_filepath, 'wb')
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
-                for line in chunk.texto:
-                    outfile.write(f'{line}\n'.encode())
-        outfile.close()
+                for _id, texto in zip(chunk._id, chunk.texto):
+                    oid = _id['$oid']
+                    output_filepath = PathUtil.join(self.rootpath, 'votos', f'{oid}.txt')
+                    outfile = open(output_filepath, 'wb')
+                    outfile.write(f'{texto}\n'.encode())
+                    outfile.close()
 
     def _process_acordaos(self):
         self.work_progress.show(f'Parsing DocumentosAcordaos.json')
         input_filepath = PathUtil.join(self.rootpath, 'DocumentosAcordaos.json')
-        output_filepath = PathUtil.join(self.rootpath, 'DocumentosAcordaos.txt')
-        outfile = open(output_filepath, 'wb')
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
-                for ementa, acordao in zip(chunk.acordao, chunk.ementa):
-                    line1 = ementa['texto']
-                    line2 = acordao['texto']
-                    outfile.write(f'{line1}\n'.encode())
-                    outfile.write(f'{line2}\n'.encode())
-        outfile.close()
+                for _id, ementa, acordao in zip(chunk._id, chunk.acordao, chunk.ementa):
+                    oid = _id['$oid']
+                    ementa_texto = ementa['texto']
+                    output_filepath = PathUtil.join(self.rootpath, 'ementas', f'{oid}.txt')
+                    outfile = open(output_filepath, 'wb')
+                    outfile.write(f'{ementa_texto}\n'.encode())
+                    outfile.close()
+                    acordao_texto = acordao['texto']
+                    output_filepath = PathUtil.join(self.rootpath, 'acordaos', f'{oid}.txt')
+                    outfile = open(output_filepath, 'wb')
+                    outfile.write(f'{acordao_texto}\n'.encode())
+                    outfile.close()
