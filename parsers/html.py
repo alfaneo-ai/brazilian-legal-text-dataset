@@ -1,16 +1,18 @@
 from .cleaner import Cleaner
 from bs4 import BeautifulSoup
-
+from .segmentation import DefaultSegmentation
 from utils import WorkProgress, DatasetManager, PathUtil
 
 
 class HtmlParser:
-    def __init__(self, selector, folder):
+    def __init__(self, selector, folder, enable_segmentation=False):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
         self.cleaner = Cleaner()
         self.selector = selector
         self.rootpath = PathUtil.build_path('output', 'unsupervised', folder)
+        self.enable_segmentation = enable_segmentation
+        self.default_segmentation = DefaultSegmentation()
 
     def execute(self):
         self.work_progress.show('Staring html parser')
@@ -19,11 +21,23 @@ class HtmlParser:
             self.work_progress.show(f'Parsing {filepath}')
             content = self.dataset_manager.to_text(filepath)
             paragraphs = self.selector.get_text(content)
+            paragraphs = self.segmentation_sentences(paragraphs)
             paragraphs = self.cleaner.clear(paragraphs)
             output_filepath = self.get_output_filepath(filepath)
             self.dataset_manager.to_file(output_filepath, paragraphs)
             self.work_progress.show(f'File created in {output_filepath}')
         self.work_progress.show('Html parser has finished!')
+
+    def segmentation_sentences(self, paragraphs):
+        if not self.enable_segmentation:
+            return paragraphs
+
+        sentences = []
+        for paragraph in paragraphs:
+            paragraphs_sents = self.default_segmentation.split(paragraph)
+            if len(paragraphs_sents) > 0:
+                sentences = sentences + paragraphs_sents
+        return sentences
 
     @staticmethod
     def get_output_filepath(source_filepath):

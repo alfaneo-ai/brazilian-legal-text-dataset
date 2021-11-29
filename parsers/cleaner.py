@@ -14,6 +14,8 @@ class Cleaner:
         texts = self._remove_multiples_spaces(texts)
         texts = self._remove_multiples_dots(texts)
         texts = self._remove_citation(texts)
+        texts = self._remove_space_in_last_period(texts)
+        texts = self._remove_last_number(texts)
         texts = self._strip_spaces(texts)
         if not is_array:
             texts = texts[0]
@@ -35,6 +37,14 @@ class Cleaner:
     @staticmethod
     def _remove_citation(paragraphs):
         return [re.sub(r'[\[\(].+[\]\)]', '', paragraph) for paragraph in paragraphs]
+
+    @staticmethod
+    def _remove_space_in_last_period(paragraphs):
+        return [re.sub(r'\s\.$', '.', paragraph) for paragraph in paragraphs]
+
+    @staticmethod
+    def _remove_last_number(paragraphs):
+        return [re.sub(r'\.\d+$', '.', paragraph) for paragraph in paragraphs]
 
     @staticmethod
     def _strip_spaces(paragraphs):
