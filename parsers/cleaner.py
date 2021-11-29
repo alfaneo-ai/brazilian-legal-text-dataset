@@ -14,7 +14,6 @@ class Cleaner:
         texts = self._remove_multiples_spaces(texts)
         texts = self._remove_multiples_dots(texts)
         texts = self._remove_citation(texts)
-        # texts = self._remove_numeric_bullets(texts)
         texts = self._strip_spaces(texts)
         if not is_array:
             texts = texts[0]
@@ -22,7 +21,7 @@ class Cleaner:
 
     @staticmethod
     def _remove_undesired_chars(paragraphs):
-        return [re.sub(r'[\n\t\"\'●_]', '', paragraph) for paragraph in paragraphs]
+        return [re.sub(r'[”“●_\n\t\'\"]', '', paragraph) for paragraph in paragraphs]
 
     @staticmethod
     def _remove_multiples_spaces(paragraphs):
@@ -36,10 +35,6 @@ class Cleaner:
     @staticmethod
     def _remove_citation(paragraphs):
         return [re.sub(r'[\[\(].+[\]\)]', '', paragraph) for paragraph in paragraphs]
-
-    @staticmethod
-    def _remove_numeric_bullets(paragraphs):
-        return [re.sub(r'\.\s\d\.\s', '. ', paragraph) for paragraph in paragraphs]
 
     @staticmethod
     def _strip_spaces(paragraphs):

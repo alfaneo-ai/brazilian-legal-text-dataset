@@ -2,6 +2,7 @@ import pandas as pd
 
 from utils import WorkProgress, DatasetManager, PathUtil
 from .cleaner import Cleaner
+from .segmentation import EmentaSegmentation, DefaultSegmentation
 
 
 class IudiciumParser:
@@ -14,11 +15,14 @@ class IudiciumParser:
         self.votos_path = None
         self.ementa_path = None
         self.acordao_path = None
+        self.ementa_segmentation = EmentaSegmentation()
+        self.default_segmentation = DefaultSegmentation()
+        self.dataset_manager = DatasetManager()
 
     def execute(self):
         self.work_progress.show('Staring iudicium parser')
         self._create_output_folders()
-        # self._process_relatorio()
+        self._process_relatorio()
         self._process_votos()
         self._process_acordaos()
         self.work_progress.show('Iudicium parser has finished!')
@@ -51,18 +55,17 @@ class IudiciumParser:
         input_filepath = PathUtil.join(self.rootpath, 'DocumentosAcordaos.json')
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
-                for _id, ementa, acordao in zip(chunk._id, chunk.acordao, chunk.ementa):
+                for _id, ementa, acordao in zip(chunk._id, chunk.ementa, chunk.acordao):
                     oid = _id['$oid']
                     ementa_texto = ementa['texto']
                     acordao_texto = acordao['texto']
-                    self._export_content(oid, ementa_texto, self.ementa_path)
+                    ementa_sentences = self.ementa_segmentation.split(ementa_texto)
+                    self._export_content(oid, ementa_sentences, self.ementa_path)
                     self._export_content(oid, acordao_texto, self.acordao_path)
 
     def _export_content(self, oid, texto, path):
         cleaned_text = self.cleaner.clear(texto)
         if cleaned_text:
             output_filepath = PathUtil.join(path, f'{oid}.txt')
-            outfile = open(output_filepath, 'wb')
-            outfile.write(f'{cleaned_text}\n'.encode())
-            outfile.close()
+            self.dataset_manager.to_file(output_filepath, cleaned_text)
             self.work_progress.show(f'Created file: {output_filepath}')
