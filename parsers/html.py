@@ -1,5 +1,4 @@
-import re
-
+from .cleaner import Cleaner
 from bs4 import BeautifulSoup
 
 from utils import WorkProgress, DatasetManager, PathUtil
@@ -30,15 +29,6 @@ class HtmlParser:
     def get_output_filepath(source_filepath):
         part = source_filepath.split('.', maxsplit=1)[0]
         return f'{part}.txt'
-
-
-class Cleaner:
-    @staticmethod
-    def clear(paragraphs):
-        paragraphs = [re.sub(r'[\n\t●]', '', paragraph) for paragraph in paragraphs]
-        paragraphs = [re.sub(r'\s+', ' ', paragraph) for paragraph in paragraphs]
-        paragraphs = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
-        return paragraphs
 
 
 class SumulaHtmlSelector:

@@ -1,12 +1,14 @@
 import pandas as pd
 
 from utils import WorkProgress, DatasetManager, PathUtil
+from .cleaner import Cleaner
 
 
 class IudiciumParser:
     def __init__(self):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
+        self.cleaner = Cleaner()
         self.rootpath = PathUtil.build_path('output', 'unsupervised', 'stf', 'iudicium')
         self.relatorio_path = None
         self.votos_path = None
@@ -16,7 +18,7 @@ class IudiciumParser:
     def execute(self):
         self.work_progress.show('Staring iudicium parser')
         self._create_output_folders()
-        self._process_relatorio()
+        # self._process_relatorio()
         self._process_votos()
         self._process_acordaos()
         self.work_progress.show('Iudicium parser has finished!')
@@ -33,12 +35,7 @@ class IudiciumParser:
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
                 for _id, texto in zip(chunk._id, chunk.texto):
-                    oid = _id['$oid']
-                    output_filepath = PathUtil.join(self.relatorio_path, f'{oid}.txt')
-                    outfile = open(output_filepath, 'wb')
-                    outfile.write(f'{texto}\n'.encode())
-                    outfile.close()
-                    self.work_progress.show(f'Created file: {output_filepath}')
+                    self._export_content(_id['$oid'], texto, self.relatorio_path)
 
     def _process_votos(self):
         self.work_progress.show(f'Parsing AcordaosVotos.json')
@@ -46,12 +43,8 @@ class IudiciumParser:
         with pd.read_json(input_filepath, lines=True, chunksize=10000) as file:
             for chunk in file:
                 for _id, texto in zip(chunk._id, chunk.texto):
-                    oid = _id['$oid']
-                    output_filepath = PathUtil.join(self.votos_path, f'{oid}.txt')
-                    outfile = open(output_filepath, 'wb')
-                    outfile.write(f'{texto}\n'.encode())
-                    outfile.close()
-                    self.work_progress.show(f'Created file: {output_filepath}')
+                    self.work_progress.show(_id['$oid'])
+                    self._export_content(_id['$oid'], texto, self.votos_path)
 
     def _process_acordaos(self):
         self.work_progress.show(f'Parsing DocumentosAcordaos.json')
@@ -61,15 +54,15 @@ class IudiciumParser:
                 for _id, ementa, acordao in zip(chunk._id, chunk.acordao, chunk.ementa):
                     oid = _id['$oid']
                     ementa_texto = ementa['texto']
-                    output_filepath = PathUtil.join(self.ementa_path, f'{oid}.txt')
-                    outfile = open(output_filepath, 'wb')
-                    outfile.write(f'{ementa_texto}\n'.encode())
-                    outfile.close()
-                    self.work_progress.show(f'Created file: {output_filepath}')
-
                     acordao_texto = acordao['texto']
-                    output_filepath = PathUtil.join(self.acordao_path, f'{oid}.txt')
-                    outfile = open(output_filepath, 'wb')
-                    outfile.write(f'{acordao_texto}\n'.encode())
-                    outfile.close()
-                    self.work_progress.show(f'Created file: {output_filepath}')
+                    self._export_content(oid, ementa_texto, self.ementa_path)
+                    self._export_content(oid, acordao_texto, self.acordao_path)
+
+    def _export_content(self, oid, texto, path):
+        cleaned_text = self.cleaner.clear(texto)
+        if cleaned_text:
+            output_filepath = PathUtil.join(path, f'{oid}.txt')
+            outfile = open(output_filepath, 'wb')
+            outfile.write(f'{cleaned_text}\n'.encode())
+            outfile.close()
+            self.work_progress.show(f'Created file: {output_filepath}')
