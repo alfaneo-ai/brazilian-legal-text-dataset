@@ -7,6 +7,8 @@ class Merger:
     def __init__(self):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
+        self.max_tokens = 0
+        self.mean_tokens = 0
 
     def execute(self):
         self.work_progress.show('Merging all text files')
@@ -25,6 +27,7 @@ class Merger:
                 for line in lines:
                     outfile.write(f'{line}\n'.encode())
         outfile.close()
+        self.work_progress.show(f'Biggest line {self.max_tokens}, Mean {self.mean_tokens}')
         self.work_progress.show('Merging has finished!')
 
     def pre_process(self, lines):
@@ -33,6 +36,11 @@ class Merger:
             line_str = line.decode('utf-8')
             line_str = line_str.strip()
             tokens = line_str.split()
+            size = len(tokens)
             if len(tokens) >= self.MINIMAL_TOKENS:
                 result.append(line_str)
+                if size > self.max_tokens:
+                    self.max_tokens = size
+                self.mean_tokens = (self.mean_tokens + size)/2
+
         return result

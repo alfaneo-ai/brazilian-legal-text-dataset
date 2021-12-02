@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -17,13 +18,13 @@ class PlanaltoLawScraper:
             'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/estatutos'
         ]
         self.three_level_deep_urls = [
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-ordinarias',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-complementares-1',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/medidas-provisorias',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos1',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos-leis',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos-nao-numerados1',
-            # 'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-delegadas-1'
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-ordinarias',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-complementares-1',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/medidas-provisorias',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos1',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos-leis',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos-nao-numerados1',
+            'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-delegadas-1'
         ]
         self.rootpath = PathUtil.build_path('output', 'unsupervised', 'planalto')
 
@@ -57,12 +58,15 @@ class PlanaltoLawScraper:
             self._process_detail(targetpath, name, href)
 
     def _process_detail(self, targetpath, name, href):
-        detail = DetailPage(href)
-        content = detail.get_content()
-        filename = f'{name}.html'
-        filepath = PathUtil.join(targetpath, filename)
-        self.dataset_manager.to_file(filepath, content)
-        self.work_progress.show(f'A file {filename} was created.')
+        try:
+            detail = DetailPage(href)
+            content = detail.get_content()
+            filename = f'{name}.html'
+            filepath = PathUtil.join(targetpath, filename)
+            self.dataset_manager.to_file(filepath, content)
+            self.work_progress.show(f'A file {filename} was created.')
+        except WebDriverException:
+            self.work_progress.show(f'Getting error {name} in {href}')
 
     @staticmethod
     def _get_foldername(url):
