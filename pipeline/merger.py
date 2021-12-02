@@ -2,13 +2,14 @@ from utils import WorkProgress, DatasetManager, PathUtil
 
 
 class Merger:
-    MINIMAL_TOKENS = 5
+    MINIMAL_TOKENS = 10
+    MAX_TOKENS = 500
 
     def __init__(self):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
-        self.max_tokens = 0
-        self.mean_tokens = 0
+        self.big_sentences_counter = 0
+        self.bigger_sentences = []
 
     def execute(self):
         self.work_progress.show('Merging all text files')
@@ -19,28 +20,32 @@ class Merger:
         filepaths = PathUtil.get_files(source_path, '*.txt')
         outfile = open(outfilepath, 'wb')
         for filepath in filepaths:
-            filename = PathUtil.get_filename(filepath)
-            self.work_progress.show(f'Merging {filename}')
-            with open(filepath, 'rb') as infile:
-                lines = infile.readlines()
-                lines = self.pre_process(lines)
-                for line in lines:
-                    outfile.write(f'{line}\n'.encode())
+            self._process_document(filepath, outfile)
         outfile.close()
-        self.work_progress.show(f'Biggest line {self.max_tokens}, Mean {self.mean_tokens}')
+        self.work_progress.show(f'{self.big_sentences_counter} sentences bigger than maximum')
         self.work_progress.show('Merging has finished!')
 
-    def pre_process(self, lines):
+    def _process_document(self, infilepath, outfile):
+        filename = PathUtil.get_filename(infilepath)
+        self.work_progress.show(f'Merging {filename}')
+        with open(infilepath, 'rb') as infile:
+            lines = infile.readlines()
+            lines = self._pre_textlines(lines)
+            if len(lines) > 0:
+                for line in lines:
+                    outfile.write(f'{line}\n'.encode())
+                outfile.write('\n'.encode())
+
+    def _pre_textlines(self, textlines):
         result = []
-        for line in lines:
+        for line in textlines:
             line_str = line.decode('utf-8')
             line_str = line_str.strip()
             tokens = line_str.split()
             size = len(tokens)
-            if len(tokens) >= self.MINIMAL_TOKENS:
+            if size >= self.MINIMAL_TOKENS:
                 result.append(line_str)
-                if size > self.max_tokens:
-                    self.max_tokens = size
-                self.mean_tokens = (self.mean_tokens + size)/2
-
+            if size > self.MAX_TOKENS:
+                self.big_sentences_counter += 1
+                self.bigger_sentences.append(line_str)
         return result
