@@ -14,7 +14,7 @@ class StfSumulaScraper:
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
         self.index_url = 'http://portal.stf.jus.br/jurisprudencia/sumariosumulas.asp?base=30'
-        self.rootpath = PathUtil.build_path('output', 'unsupervised', 'stf')
+        self.rootpath = PathUtil.build_path('output', 'mlm', 'stf')
 
     def execute(self):
         self.work_progress.show('Starting scraper stf for getting sumulas')

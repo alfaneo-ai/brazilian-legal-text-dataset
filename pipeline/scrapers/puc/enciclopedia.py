@@ -25,7 +25,7 @@ class PucEnciclopediaJuridicaScraper:
     def __init__(self):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
-        self.rootpath = PathUtil.build_path('output', 'unsupervised', 'puc')
+        self.rootpath = PathUtil.build_path('output', 'mlm', 'puc')
 
     def execute(self):
         self.work_progress.show('Starting scraper for PUC Enciclopedia Juridica')

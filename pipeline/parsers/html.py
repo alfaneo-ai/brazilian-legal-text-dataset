@@ -10,7 +10,7 @@ class HtmlParser:
         self.dataset_manager = DatasetManager()
         self.cleaner = Cleaner()
         self.selector = selector
-        self.rootpath = PathUtil.build_path('output', 'unsupervised', folder)
+        self.rootpath = PathUtil.build_path('output', 'mlm', folder)
         self.enable_segmentation = enable_segmentation
         self.default_segmentation = DefaultSegmentation()
 
@@ -19,7 +19,7 @@ class HtmlParser:
         filepaths = PathUtil.get_files(self.rootpath, '*.html')
         for filepath in filepaths:
             self.work_progress.show(f'Parsing {filepath}')
-            content = self.dataset_manager.to_text(filepath)
+            content = self.dataset_manager.from_text(filepath)
             paragraphs = self.selector.get_text(content)
             paragraphs = self.segmentation_sentences(paragraphs)
             paragraphs = self.cleaner.clear(paragraphs)

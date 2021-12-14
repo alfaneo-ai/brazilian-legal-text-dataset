@@ -10,7 +10,7 @@ class IudiciumParser:
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
         self.cleaner = Cleaner()
-        self.rootpath = PathUtil.build_path('output', 'unsupervised', 'stf', 'iudicium')
+        self.rootpath = PathUtil.build_path('output', 'mlm', 'stf', 'iudicium')
         self.relatorio_path = None
         self.votos_path = None
         self.ementa_path = None

@@ -1,7 +1,9 @@
-from utils import WorkProgress, DatasetManager, PathUtil
+import os
+
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil
 
 
-class Merger:
+class MlmExporter:
     MINIMAL_TOKENS = 10
     MAX_TOKENS = 500
 
@@ -13,10 +15,12 @@ class Merger:
 
     def execute(self):
         self.work_progress.show('Merging all text files')
-        corpus_path = PathUtil.build_path('output')
+        corpus_path = PathUtil.build_path('output', 'mlm')
         outfilepath = PathUtil.join(corpus_path, 'corpus.txt')
+        if os.path.exists(outfilepath):
+            os.remove(outfilepath)
 
-        source_path = PathUtil.build_path('output', 'unsupervised')
+        source_path = PathUtil.build_path('output', 'mlm')
         filepaths = PathUtil.get_files(source_path, '*.txt')
         outfile = open(outfilepath, 'wb')
         for filepath in filepaths:

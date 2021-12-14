@@ -15,7 +15,7 @@ class StfIudiciumScraper:
 
     def execute(self):
         self.work_progress.show('Starting scraper for Iudicium Dataset')
-        basepath = PathUtil.build_path('output', 'unsupervised', 'stf')
+        basepath = PathUtil.build_path('output', 'mlm', 'stf')
         rootpath = PathUtil.create_dir(basepath, 'iudicium')
         for url in URLS:
             filename = url.split('/')[-1]

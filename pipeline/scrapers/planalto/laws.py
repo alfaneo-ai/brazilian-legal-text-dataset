@@ -26,7 +26,7 @@ class PlanaltoLawScraper:
             'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/decretos-nao-numerados1',
             'http://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/leis-delegadas-1'
         ]
-        self.rootpath = PathUtil.build_path('output', 'unsupervised', 'planalto')
+        self.rootpath = PathUtil.build_path('output', 'mlm', 'planalto')
 
     def execute(self):
         self.work_progress.show('Starting scraper laws from planalto')

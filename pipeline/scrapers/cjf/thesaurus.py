@@ -25,7 +25,7 @@ class CjfThesaurusScraper:
 
     @staticmethod
     def create_folder():
-        targetpath = PathUtil.build_path('output', 'unsupervised', 'cjf')
+        targetpath = PathUtil.build_path('output', 'mlm', 'cjf')
         return PathUtil.create_dir(targetpath, targetpath)
 
 
