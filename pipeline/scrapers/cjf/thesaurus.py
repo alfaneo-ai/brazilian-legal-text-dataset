@@ -3,7 +3,7 @@ from xml.etree import ElementTree
 
 import requests
 
-from utils import WorkProgress, DatasetManager, PathUtil
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil
 
 
 class CjfThesaurusScraper:

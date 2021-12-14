@@ -1,6 +1,6 @@
 import argparse
 
-from utils import WorkProgress
+from .utils import WorkProgress
 from .parsers import all_parsers
 from .scrapers import all_scrapers
 from .exporters import all_exporter

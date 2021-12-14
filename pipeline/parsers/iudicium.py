@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils import WorkProgress, DatasetManager, PathUtil
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil
 from .cleaner import Cleaner
 from .segmentation import EmentaSegmentation, DefaultSegmentation
 

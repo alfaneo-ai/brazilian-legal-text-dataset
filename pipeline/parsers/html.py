@@ -1,7 +1,7 @@
 from .cleaner import Cleaner
 from bs4 import BeautifulSoup
 from .segmentation import DefaultSegmentation
-from utils import WorkProgress, DatasetManager, PathUtil
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil
 
 
 class HtmlParser:

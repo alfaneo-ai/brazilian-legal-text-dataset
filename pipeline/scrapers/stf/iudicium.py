@@ -2,7 +2,7 @@ import requests
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-from utils import WorkProgress, PathUtil
+from pipeline.utils import WorkProgress, PathUtil
 
 URLS = ['http://dadosabertos.c3sl.ufpr.br/acordaos/json/AcordaosRelatorios.json',
         'http://dadosabertos.c3sl.ufpr.br/acordaos/json/AcordaosVotos.json',
