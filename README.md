@@ -5,38 +5,32 @@ Brazilian Legal Text Dataset for pre-trainning transformer based models
 Before run, you have to install in your path a Firefox WebDriver for Selenium.
 
 ## Get Started
-
-#### Dependencies
 Run command below to install all required dependencies.
 
 ```shell
 pip install -r requirements.txt
 ```
 
-#### Running all pipeline
-Run the command below to run all pipeline (scraper, parser and merge all files). 
-You have to specify a goal (mlm or sts).
+## Generate MLM Dataset
+To generate a dataset for MLM BERT pre-trainning.
+Run the command below to execute all pipeline that will generate a single file `output/mlm/corpus.txt`.
 
 ```shell
-python run.py mlm
+python mlm.py all
 ```
 
-or 
+To run individual tasks, you can pass a task as parameter:
 
 ```shell
-python run.py sts
+python mlm.py scrap
+python run.py parse
+python run.py export
 ```
 
-#### Running individual task
-To run individual tasks, you have tod specify task and :
+## Generate STS Dataset
+To generate a dataset for STS BERT fine-tunning.
+Run the command below to execute all pipeline that will generate two files `output/sts/train.csv` and `output/sts/dev.csv`.
 
 ```shell
-python run.py sts --scrap
-python run.py sts --parse
-python run.py sts --export
-python run.py mlm --scrap
-python run.py mlm --parse
-python run.py mlm --export
+python sts.py all
 ```
-
-All outputs will be created in path `output` folder.

@@ -1,4 +1,5 @@
 from .mlm import MlmExporter
 from .sts import StsExporter
 
-all_exporter = [MlmExporter(), StsExporter()]
+mlm_exporter = MlmExporter()
+sts_exporter = StsExporter()

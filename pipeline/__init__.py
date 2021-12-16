@@ -1,36 +1,32 @@
-import argparse
-
+from .exporters import mlm_exporter, sts_exporter
+from .parsers import mlm_parsers
+from .scrapers import mlm_scrapers
 from .utils import WorkProgress
-from .parsers import all_parsers
-from .scrapers import all_scrapers
-from .exporters import all_exporter
 
 
-def parse_commands():
-    parser = argparse.ArgumentParser(prog='CLI', description='Brazilian Legal Texts Scraper')
-    parser.add_argument('task',
-                        choices=['all', 'scrap', 'parse', 'export'],
-                        action='store',
-                        default='all',
-                        help='Set a target task to execute')
-    args = vars(parser.parse_args())
-    return args['task']
-
-
-class PipelineManager:
+class MlmPipelineManager:
     def __init__(self):
         self.work_progress = WorkProgress()
 
-    def execute(self):
-        self.work_progress.show('Starting a pipeline')
-        task = parse_commands()
+    def execute(self, task):
+        self.work_progress.show('Starting a MLM pipeline')
         if task in ['all', 'scrap']:
-            for scraper in all_scrapers:
+            for scraper in mlm_scrapers:
                 scraper.execute()
         if task in ['all', 'parse']:
-            for parser in all_parsers:
+            for parser in mlm_parsers:
                 parser.execute()
         if task in ['all', 'export']:
-            for exporter in all_exporter:
-                exporter.execute()
-        self.work_progress.show('Pipeline has finished!')
+            mlm_exporter.execute()
+        self.work_progress.show('MLM Pipeline has finished!')
+
+
+class StsPipelineManager:
+    def __init__(self):
+        self.work_progress = WorkProgress()
+
+    def execute(self, task):
+        self.work_progress.show('Starting a STS pipeline')
+        if task in ['all', 'export']:
+            sts_exporter.execute()
+        self.work_progress.show('STS Pipeline has finished!')
