@@ -19,6 +19,17 @@ def split_train_test(dataset):
 
 
 class StsExporter:
+    TEXT_FIELD = 'ementa'
+
+    # ID_FIELD = 'titulo'
+    ID_FIELD = 'acordao_id'
+
+    # GROUP_FIELDS = ['area', 'tema', 'discussao']
+    GROUP_FIELDS = ['assunto']
+
+    # SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
+    SOURCE_FILENAME = 'annotated-queries.csv'
+
     HEADER = {'assunto': [], 'id1': [], 'ementa1': [], 'id2': [], 'ementa2': [], 'similarity': []}
 
     def __init__(self):
@@ -38,12 +49,12 @@ class StsExporter:
 
     def _read_annotated_dataset(self):
         self.work_progress.show('Reading annotated dataset')
-        annotated_filepath = PathUtil.build_path('resources', 'annotated-queries.csv')
+        annotated_filepath = PathUtil.build_path('resources', self.SOURCE_FILENAME)
         self.annotated_dataset = self.dataset_manager.from_csv(annotated_filepath)
 
     def _match_similar_sentences(self):
         self.work_progress.show('Match similar sentences')
-        groups = self.annotated_dataset.groupby('assunto')
+        groups = self.annotated_dataset.groupby(self.GROUP_FIELDS)
         for group_name, group in groups:
             self.work_progress.show(f'Processing group {group_name} with {len(group)} itens')
             pairs = list(pairwise(group.index))
@@ -55,7 +66,7 @@ class StsExporter:
 
     def _match_unsimilar_sentences(self):
         self.work_progress.show('Match unsimilar sentences')
-        groups = self.annotated_dataset.groupby('assunto')
+        groups = self.annotated_dataset.groupby(self.GROUP_FIELDS)
         group_pairs = list(pairwise(groups))
         for group_pair in group_pairs:
             group1_name = group_pair[0][0]
@@ -76,14 +87,15 @@ class StsExporter:
                 item = self._create_item(sentence1, sentence2, similarity=0)
                 self.sts_dataset = self.sts_dataset.append(item, ignore_index=True)
 
-    @staticmethod
-    def _create_item(sentence1, sentence2, similarity):
+    def _create_item(self, sentence1, sentence2, similarity):
+        key_group = sentence1[self.GROUP_FIELDS]
+        key_group = '/'.join(key_group)
         return {
-            'assunto': sentence1['assunto'],
-            'id1': sentence1['acordao_id'],
-            'ementa1': correct_spelling(sentence1['ementa']),
-            'id2': sentence2['acordao_id'],
-            'ementa2': correct_spelling(sentence2['ementa']),
+            'assunto': key_group,
+            'id1': sentence1[self.ID_FIELD],
+            'ementa1': correct_spelling(sentence1[self.TEXT_FIELD]),
+            'id2': sentence2[self.ID_FIELD],
+            'ementa2': correct_spelling(sentence2[self.TEXT_FIELD]),
             'similarity': similarity
         }
 
