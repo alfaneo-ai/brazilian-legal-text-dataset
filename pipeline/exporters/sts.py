@@ -21,14 +21,17 @@ def split_train_test(dataset):
 class StsExporter:
     TEXT_FIELD = 'ementa'
 
-    # ID_FIELD = 'titulo'
-    ID_FIELD = 'acordao_id'
+    SHOULD_SPLIT = False
+    # SHOULD_SPLIT = True
 
-    # GROUP_FIELDS = ['area', 'tema', 'discussao']
-    GROUP_FIELDS = ['assunto']
+    ID_FIELD = 'titulo'
+    # ID_FIELD = 'acordao_id'
 
-    # SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
-    SOURCE_FILENAME = 'annotated-queries.csv'
+    GROUP_FIELDS = ['area', 'tema', 'discussao']
+    # GROUP_FIELDS = ['assunto']
+
+    SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
+    # SOURCE_FILENAME = 'annotated-queries.csv'
 
     HEADER = {'assunto': [], 'id1': [], 'ementa1': [], 'id2': [], 'ementa2': [], 'similarity': []}
 
@@ -43,8 +46,12 @@ class StsExporter:
         self._read_annotated_dataset()
         self._match_similar_sentences()
         self._match_unsimilar_sentences()
-        train_dataset, dev_dataset = self._split_dataset()
-        self._save_sts_datasets(train_dataset, dev_dataset)
+        if self.SHOULD_SPLIT:
+            train_dataset, dev_dataset = self._split_dataset()
+            self._save_sts_dataset(train_dataset, 'train')
+            self._save_sts_dataset(dev_dataset, 'dev')
+        else:
+            self._save_sts_dataset(self.sts_dataset, 'eval')
         self.work_progress.show('STS dataset has finished!')
 
     def _read_annotated_dataset(self):
@@ -102,9 +109,7 @@ class StsExporter:
     def _split_dataset(self):
         return split_train_test(self.sts_dataset)
 
-    def _save_sts_datasets(self, train_dataset, dev_dataset):
-        self.work_progress.show('Saving STS train and dev datasets')
-        train_filepath = PathUtil.build_path('output', 'sts', 'train.csv')
-        dev_filepath = PathUtil.build_path('output', 'sts', 'dev.csv')
-        self.dataset_manager.to_csv(train_dataset, train_filepath)
-        self.dataset_manager.to_csv(dev_dataset, dev_filepath)
+    def _save_sts_dataset(self, dataset, name):
+        self.work_progress.show('Saving STS dataset')
+        train_filepath = PathUtil.build_path('output', 'sts', f'{name}.csv')
+        self.dataset_manager.to_csv(dataset, train_filepath)
