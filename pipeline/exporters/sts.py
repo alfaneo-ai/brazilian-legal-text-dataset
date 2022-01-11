@@ -1,15 +1,8 @@
-import re
-
 import pandas as pd
 from more_itertools import pairwise, zip_offset
 from sklearn.model_selection import train_test_split
 
-from pipeline.utils import WorkProgress, DatasetManager, PathUtil
-
-
-def correct_spelling(text):
-    text = re.sub(r'E\sM\sE\sN\sT\sA[\s\.-–]', 'EMENTA ', text).strip()
-    return re.sub(r'A\sC\sÓ\sR\sD\sÃ\sO', 'ACÓRDÃO', text)
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spelling
 
 
 def split_train_test(dataset):
@@ -21,17 +14,17 @@ def split_train_test(dataset):
 class StsExporter:
     TEXT_FIELD = 'ementa'
 
-    SHOULD_SPLIT = False
-    # SHOULD_SPLIT = True
+    # SHOULD_SPLIT = False
+    SHOULD_SPLIT = True
 
-    ID_FIELD = 'titulo'
-    # ID_FIELD = 'acordao_id'
+    # ID_FIELD = 'titulo'
+    ID_FIELD = 'acordao_id'
 
-    GROUP_FIELDS = ['area', 'tema', 'discussao']
-    # GROUP_FIELDS = ['assunto']
+    # GROUP_FIELDS = ['area', 'tema', 'discussao']
+    GROUP_FIELDS = ['assunto']
 
-    SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
-    # SOURCE_FILENAME = 'annotated-queries.csv'
+    # SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
+    SOURCE_FILENAME = 'annotated-queries.csv'
 
     HEADER = {'assunto': [], 'id1': [], 'ementa1': [], 'id2': [], 'ementa2': [], 'similarity': []}
 
