@@ -6,7 +6,7 @@ from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spell
 
 
 def split_train_test(dataset):
-    train_samples, test_samples = train_test_split(dataset, train_size=0.80, test_size=0.20, random_state=103,
+    train_samples, test_samples = train_test_split(dataset, train_size=0.50, test_size=0.50, random_state=103,
                                                    shuffle=True)
     return train_samples, test_samples
 
@@ -41,7 +41,7 @@ class StsExporter:
         self._match_unsimilar_sentences()
         if self.SHOULD_SPLIT:
             train_dataset, dev_dataset = self._split_dataset()
-            self._save_sts_dataset(train_dataset, 'train')
+            self._save_sts_dataset(train_dataset, 'test')
             self._save_sts_dataset(dev_dataset, 'dev')
         else:
             self._save_sts_dataset(self.sts_dataset, 'eval')
