@@ -6,7 +6,7 @@ from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spell
 
 
 def split_train_test(dataset):
-    train_samples, test_samples = train_test_split(dataset, train_size=0.50, test_size=0.50, random_state=103,
+    train_samples, test_samples = train_test_split(dataset, train_size=0.80, test_size=0.20, random_state=103,
                                                    shuffle=True)
     return train_samples, test_samples
 
@@ -17,14 +17,14 @@ class StsExporter:
     # SHOULD_SPLIT = False
     SHOULD_SPLIT = True
 
-    # ID_FIELD = 'titulo'
-    ID_FIELD = 'acordao_id'
+    ID_FIELD = 'titulo'
+    # ID_FIELD = 'acordao_id'
 
-    # GROUP_FIELDS = ['area', 'tema', 'discussao']
-    GROUP_FIELDS = ['assunto']
+    GROUP_FIELDS = ['area', 'tema', 'discussao']
+    # GROUP_FIELDS = ['assunto']
 
-    # SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
-    SOURCE_FILENAME = 'annotated-queries.csv'
+    SOURCE_FILENAME = 'pesquisas-prontas-stf.csv'
+    # SOURCE_FILENAME = 'annotated-queries.csv'
 
     HEADER = {'assunto': [], 'id1': [], 'ementa1': [], 'id2': [], 'ementa2': [], 'similarity': []}
 

@@ -3,6 +3,8 @@ Brazilian Legal Text Dataset for pre-trainning transformer based models
 
 ## Requeriments
 Before run, you have to install in your path a Firefox WebDriver for Selenium.
+Download last release at <https://github.com/mozilla/geckodriver/releases>
+Put executable file in PATH.
 
 ## Get Started
 Run command below to install all required dependencies.
