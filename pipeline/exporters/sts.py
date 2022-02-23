@@ -6,15 +6,14 @@ from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spell
 
 
 class StsExporter:
-    ID_FIELD = 'id'
 
     TEXT_FIELD = 'ementa'
 
-    GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao']]
+    GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao'], 'assunto']
 
-    SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv']
+    SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv', 'pesquisas-prontas-stj.csv']
 
-    HEADER = {'assunto': [], 'id1': [], 'ementa1': [], 'id2': [], 'ementa2': [], 'similarity': []}
+    HEADER = {'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
 
     def __init__(self):
         self.work_progress = WorkProgress()
@@ -95,9 +94,7 @@ class StsExporter:
             assunto = ' '.join(keygroup)
         return {
             'assunto': assunto,
-            'id1': sentence1[self.ID_FIELD],
             'ementa1': correct_spelling(sentence1[self.TEXT_FIELD]),
-            'id2': sentence2[self.ID_FIELD],
             'ementa2': correct_spelling(sentence2[self.TEXT_FIELD]),
             'similarity': similarity
         }
