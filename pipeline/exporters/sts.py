@@ -113,6 +113,9 @@ class StsExporter:
                                                       test_size=0.75,
                                                       random_state=99,
                                                       shuffle=True)
+        train_samples = train_samples.reset_index(drop=True)
+        eval_samples = eval_samples.reset_index(drop=True)
+        test_samples = test_samples.reset_index(drop=True)
         return train_samples, eval_samples, test_samples
 
     def _print_summary(self, dataset, name):
