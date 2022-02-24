@@ -1,5 +1,4 @@
 import logging
-import time
 
 import requests
 import re
@@ -218,9 +217,7 @@ class SearchParser:
                 field_name = field.find('div', {'class': 'docTitulo'}).text
                 if field_name == 'Ementa':
                     field_content = field.find('div', {'class': 'docTexto'}).text.strip()
-                    metadata['ementa'] = self.__remove_unwanted_characters(field_content)
-                    logging.info(field_content)
-                    time.sleep(2)
+                    metadata['ementa'] = str(self.__remove_unwanted_characters(field_content))
             METADATA.append(metadata)
 
     @staticmethod
