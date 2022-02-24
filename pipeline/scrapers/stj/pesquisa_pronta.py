@@ -123,7 +123,7 @@ class StjPesquisaProntaScraper(SearchMapper):
         dataframe = pd.DataFrame(HEADER)
         dataframe = dataframe.append(METADATA, ignore_index=True)
         filepath = PathUtil.build_path('resources', 'pesquisas-prontas-stj.csv')
-        self.dataset_manager.to_csv(dataframe, filepath)
+        self.dataset_manager.to_csv(dataframe, filepath, index=False)
 
 
 class TotalPage:

@@ -12,11 +12,11 @@ class DatasetManager:
         return pd.read_csv(filepath, sep='|', encoding='utf-8-sig')
 
     @staticmethod
-    def to_csv(dataset, filepath):
+    def to_csv(dataset, filepath, index=False):
         if os.path.exists(filepath):
             os.remove(filepath)
         dataset = pd.DataFrame(dataset)
-        dataset.to_csv(filepath, sep='|', encoding='utf-8-sig', index_label='index')
+        dataset.to_csv(filepath, sep='|', encoding='utf-8-sig', index_label='index', index=index)
 
     @staticmethod
     def to_file(filepath, texts):
