@@ -1,5 +1,4 @@
 import logging
-import time
 
 import requests
 import re
@@ -217,13 +216,16 @@ class SearchParser:
             for field in document.findAll('div', {'class': 'paragrafoBRS'}):
                 field_name = field.find('div', {'class': 'docTitulo'}).text
                 if field_name == 'Ementa':
-                    field_content = field.find('div', {'class': 'docTexto'}).text.strip()
-                    metadata['ementa'] = self.__remove_unwanted_characters(field_content)
-                    logging.info(field_content)
-                    time.sleep(2)
-            METADATA.append(metadata)
+                    field_content = self.__remove_unwanted_characters(field.find('div', {'class': 'docTexto'}).text)
+                    if self.__does_sentence_exist(field_content):
+                        metadata['ementa'] = self.__remove_unwanted_characters(field_content)
+                        METADATA.append(metadata)
 
     @staticmethod
     def __remove_unwanted_characters(phrase):
         new_phrase = re.sub(' +', ' ', phrase)
         return re.sub('[\r\n]"', ' ', new_phrase)
+
+    @staticmethod
+    def __does_sentence_exist(sentence):
+        return len(sentence.split()) > 10
