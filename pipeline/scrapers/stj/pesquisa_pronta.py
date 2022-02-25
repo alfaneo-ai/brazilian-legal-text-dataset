@@ -1,5 +1,4 @@
 import logging
-import time
 
 import requests
 import re
@@ -104,7 +103,8 @@ class StjPesquisaProntaScraper(SearchMapper):
                 logging.info(f'Iniciando busca na página {self.current_page + PAGE_INCREMENT}')
                 self.search_page.execute(self.current_search_code, subject, self.current_page)
                 self.__increment_page_counters()
-        logging.info(f'O Scrapper processou um total de {len(METADATA)} documento(s) e está escrevendo o dataset "pesquisas-prontas-stj.csv"')
+        logging.info(f'O Scrapper processou um total de {len(METADATA)} documento(s) e está escrevendo o dataset '
+                     f'"pesquisas-prontas-stj.csv"')
         self.__create_spreasheet_dataset()
         logging.info(f'O Scrapper STJ Pesquisa Pronta foi finalizado com sucesso')
 
