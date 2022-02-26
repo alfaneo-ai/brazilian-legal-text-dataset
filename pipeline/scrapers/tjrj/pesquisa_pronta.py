@@ -1,6 +1,6 @@
 import logging
+
 import requests
-import time
 from bs4 import BeautifulSoup
 
 
@@ -8,7 +8,7 @@ def html_extractor(response):
     return BeautifulSoup(response.text, 'html.parser')
 
 
-class PjerjPesquisaProntaScrapper:
+class TjrjPesquisaProntaScrapper:
     def __init__(self):
         self.link_page = LinkPage()
         self.links = None
@@ -16,6 +16,7 @@ class PjerjPesquisaProntaScrapper:
     def execute(self):
         logging.info(f'Iniciando a execução do Scrapper PJERJ Pesquisa Pronta')
         self.__get_documents_links()
+        logging.info(f'{self.links}')
         logging.info('O Scrapper PJERJ Pesquisa Pronta foi finalizado com sucesso')
 
     def __get_documents_links(self):

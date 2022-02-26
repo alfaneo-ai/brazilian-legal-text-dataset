@@ -1,1 +1,0 @@
-from .pesquisa_pronta import PjerjPesquisaProntaScrapper
