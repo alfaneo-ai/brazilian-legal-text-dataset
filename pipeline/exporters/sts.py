@@ -11,7 +11,7 @@ class StsExporter:
 
     GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao'], 'assunto']
 
-    SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv', 'pesquisas-prontas-stj.csv']
+    SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv', 'pesquisas-prontas-stj.csv', 'pesquisas-prontas-pjerj.csv']
 
     HEADER = {'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
 

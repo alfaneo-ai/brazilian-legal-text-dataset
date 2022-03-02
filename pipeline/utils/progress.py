@@ -6,6 +6,7 @@ def create_logger():
     lineformat = '[%(asctime)s] | %(levelname)s | [%(process)d - %(processName)s]: %(message)s'
     dateformat = '%d-%m-%Y %H:%M:%S'
     logging.basicConfig(format=lineformat, datefmt=dateformat, level=20, handlers=[console_handler])
+    logging.getLogger('pdfminer').setLevel(logging.WARNING)
     return logging.getLogger()
 
 
