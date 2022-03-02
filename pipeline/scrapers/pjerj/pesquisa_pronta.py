@@ -44,7 +44,6 @@ class PjerjPesquisaProntaScrapper:
         self.current_pdf_content = None
         self.current_subject = None
         self.current_ementas = []
-        self.counter = 0
 
     def execute(self):
         logging.info(f'Iniciando a execução do Scrapper PJERJ Pesquisa Pronta')
@@ -107,8 +106,6 @@ class PjerjPesquisaProntaScrapper:
             })
 
     def __reset_current_indexes(self):
-        self.counter += 1
-        logging.info(f'processei o doc {self.counter}')
         self.current_content = None
         self.current_pdf_content = None
         self.current_subject = None
