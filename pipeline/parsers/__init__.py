@@ -1,5 +1,6 @@
-from .html import HtmlParser, ParagraphHtmlSelector, SumulaHtmlSelector, EnciclopediaHtmlSelector
+from .html import HtmlParser, ParagraphHtmlSelector, SumulaHtmlSelector, EnciclopediaHtmlSelector, PjerjHtmlParser
 from .iudicium import IudiciumParser
+from .pdf import PdfReader, PdfPjerjParser
 
 law_parser = HtmlParser(ParagraphHtmlSelector(), 'planalto')
 sumula_parser = HtmlParser(SumulaHtmlSelector(), 'stf')
