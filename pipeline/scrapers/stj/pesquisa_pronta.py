@@ -1,9 +1,7 @@
 import logging
 
 import requests
-import re
 import pandas as pd
-from bs4 import BeautifulSoup
 
 from pipeline.utils import PathUtil, DatasetManager
 from pipeline.parsers import StjTotalHtmlParser, StjSearchHtmlParser
@@ -31,10 +29,6 @@ def update_body(current_search_code, page_counter):
         'l': PAGE_SIZE,
         'i': page_counter
     }
-
-
-def html_extractor(response):
-    return BeautifulSoup(response.text, 'html.parser')
 
 
 class SearchMapper:

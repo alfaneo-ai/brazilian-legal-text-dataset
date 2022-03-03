@@ -1,5 +1,5 @@
 from .html import HtmlParser, ParagraphHtmlSelector, SumulaHtmlSelector, EnciclopediaHtmlSelector, PjerjHtmlParser, \
-    StjTotalHtmlParser, StjSearchHtmlParser
+    StjTotalHtmlParser, StjSearchHtmlParser, FgvHtmlParser
 from .iudicium import IudiciumParser
 from .pdf import PdfReader, PdfPjerjParser
 

@@ -3,7 +3,7 @@ import re
 from .cleaner import Cleaner
 from bs4 import BeautifulSoup
 from .segmentation import DefaultSegmentation
-from pipeline.utils import WorkProgress, DatasetManager, PathUtil
+from pipeline.utils import WorkProgress, DatasetManager, PathUtil, TextUtil
 
 
 class HtmlParser:
@@ -180,3 +180,32 @@ class StjSearchHtmlParser:
     @staticmethod
     def __does_sentence_exist(sentence):
         return len(sentence.split()) > 10
+
+
+class FgvHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.main_div_class = 'view view-livro-digital view-id-livro_digital view-display-id-block_1 view-dom-id-3'
+        self.list_content_class = 'item-list'
+        self.book_title_class = 'views-field-title'
+        self.book_download_url_class = 'views-field-field-livrodig-arquivo-fid'
+        self.url_list = []
+
+    def execute(self, response):
+        self.__extract_html_from_response(response)
+        self.__get_urls_from_page()
+        return self.url_list
+
+    def __extract_html_from_response(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+
+    def __get_urls_from_page(self):
+        main_div = self.html.find('div', {'class': self.main_div_class})
+        for books_list in main_div.findAll('div', {'class': self.list_content_class}):
+            for book in books_list.ul.findAll('li'):
+                book_title = book.find('div', {'class': self.book_title_class}).text
+                book_url = book.find('div', {'class': self.book_download_url_class}).find('a')['href']
+                self.url_list.append({
+                    'titulo': TextUtil.slugify(book_title) + '.pdf',
+                    'url': book_url
+                })
