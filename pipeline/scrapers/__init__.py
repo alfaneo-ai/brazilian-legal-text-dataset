@@ -10,5 +10,4 @@ mlm_scrapers = [CjfThesaurusScraper(), PlanaltoLawScraper(), PucEnciclopediaJuri
                 StfSumulaScraper(), StfIudiciumScraper()]
 
 
-# sts_scrapers = [FgvLivrosDigitais(), PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]
-sts_scrapers = [FgvLivrosDigitais()]
+sts_scrapers = [FgvLivrosDigitais(), PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]
