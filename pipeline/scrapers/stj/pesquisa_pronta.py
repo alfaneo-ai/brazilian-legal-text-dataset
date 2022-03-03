@@ -6,6 +6,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from pipeline.utils import PathUtil, DatasetManager
+from pipeline.parsers import StjTotalHtmlParser, StjSearchHtmlParser
 
 FIRST_PAGE_COUNT = 0
 HEADER = {'assunto': [], 'ementa': []}
@@ -101,6 +102,7 @@ class StjPesquisaProntaScraper(SearchMapper):
             logging.info(f'A consulta "{subject}" retornou {self.total} documento(s) em {self.count_page} página(s)')
             while self.__has_next_page():
                 logging.info(f'Iniciando busca na página {self.current_page + PAGE_INCREMENT}')
+                self.__get_metadata_from_page(subject)
                 self.search_page.execute(self.current_search_code, subject, self.current_page)
                 self.__increment_page_counters()
         logging.info(f'O Scrapper processou um total de {len(METADATA)} documento(s) e está escrevendo o dataset '
@@ -118,6 +120,11 @@ class StjPesquisaProntaScraper(SearchMapper):
     def __has_next_page(self):
         return (self.current_page + PAGE_INCREMENT) <= self.count_page
 
+    def __get_metadata_from_page(self, subject):
+        scraped_metadata = self.search_page.execute(self.current_search_code, subject, self.current_page)
+        for metadata in scraped_metadata:
+            METADATA.append(metadata)
+
     def __increment_page_counters(self):
         self.current_page += PAGE_INCREMENT
 
@@ -133,7 +140,7 @@ class TotalPage:
         self.html = None
         self.body = {}
         self.current_search_code = None
-        self.parser = TotalParser()
+        self.parser = StjTotalHtmlParser()
         self.total_found = None
 
     def execute(self, search_code):
@@ -158,12 +165,12 @@ class SearchPage:
         self.body = {}
         self.current_search_code = None
         self.current_page_counter = None
-        self.parser = SearchParser()
+        self.parser = StjSearchHtmlParser()
 
     def execute(self, search_code, subject, current_page):
         self.__update_current_code(search_code, current_page)
         self.__update_body()
-        self.__make_request(subject)
+        return self.__make_request(subject)
 
     def __update_current_code(self, search_code, current_page):
         self.current_search_code = search_code
@@ -174,59 +181,4 @@ class SearchPage:
 
     def __make_request(self, subject):
         response = requests.post(url=URL, data=self.body)
-        self.parser.execute(response, subject)
-
-
-class TotalParser:
-    def __init__(self):
-        self.html = None
-        self.total_found = None
-
-    def execute(self, response):
-        self.html = html_extractor(response)
-        self.__get_total_from_html()
-        return self.total_found
-
-    def __get_total_from_html(self):
-        search_container = self.html.find('div', {'id': 'infopesquisa'})
-        div_row = search_container.findAll('div', {'class': 'divRow'})
-        div_cell = div_row[0].findAll('div', {'class': 'divCell'})
-        total_label = div_cell[0].label.text.strip()
-        self.total_found = re.sub("[^0-9]", "", total_label)
-
-
-class SearchParser:
-    def __init__(self):
-        self.subject = None
-        self.html = None
-        self.documents_found = None
-
-    def execute(self, response, subject):
-        self.subject = subject
-        self.html = html_extractor(response)
-        self.__get_documents_from_html()
-        self.__extract_metadata_from_documents()
-
-    def __get_documents_from_html(self):
-        documents_container = self.html.find('div', {'class': 'listadocumentos'})
-        self.documents_found = documents_container.findAll('div', {'class', 'documento'})
-
-    def __extract_metadata_from_documents(self):
-        for document in self.documents_found:
-            metadata = {'assunto': self.subject}
-            for field in document.findAll('div', {'class': 'paragrafoBRS'}):
-                field_name = field.find('div', {'class': 'docTitulo'}).text
-                if field_name == 'Ementa':
-                    field_content = self.__remove_unwanted_characters(field.find('div', {'class': 'docTexto'}).text)
-                    if self.__does_sentence_exist(field_content):
-                        metadata['ementa'] = self.__remove_unwanted_characters(field_content)
-                        METADATA.append(metadata)
-
-    @staticmethod
-    def __remove_unwanted_characters(phrase):
-        new_phrase = re.sub(' +', ' ', phrase)
-        return re.sub('[\r\n]"', ' ', new_phrase)
-
-    @staticmethod
-    def __does_sentence_exist(sentence):
-        return len(sentence.split()) > 10
+        return self.parser.execute(response, subject)

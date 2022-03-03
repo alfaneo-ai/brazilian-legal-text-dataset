@@ -8,11 +8,12 @@ from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager
 from pipeline.parsers import PdfReader, PdfPjerjParser, PjerjHtmlParser
 
 
+OUTPUT_DIRECTORY_PATH = 'output'
 RESOURCES_DIRECTORY_PATH = 'resources'
 FILES_DIRECTORY_PATH = 'files'
 FILE_NAME = 'pesquisas-prontas-pjerj.pdf'
-DIRECTORY_PATH = f'{RESOURCES_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}'
-COMPLETE_FILE_PATH = f'{RESOURCES_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}/{FILE_NAME}'
+DIRECTORY_PATH = f'{OUTPUT_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}'
+COMPLETE_FILE_PATH = f'{OUTPUT_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}/{FILE_NAME}'
 METADATA = []
 HEADER = {'assunto': [], 'ementa': []}
 SPREAD_SHEET_NAME = 'pesquisas-prontas-pjerj.csv'
@@ -21,7 +22,7 @@ SEARCH_URL = 'http://www.tjrj.jus.br/web/guest/institucional/dir-gerais/dgcon/pe
 
 class PjerjPesquisaProntaScrapper:
     def __init__(self):
-        self.directory_util = DirectoryUtil(RESOURCES_DIRECTORY_PATH)
+        self.directory_util = DirectoryUtil(OUTPUT_DIRECTORY_PATH)
         self.html_parser = PjerjHtmlParser()
         self.pdf_reader = PdfReader(DIRECTORY_PATH)
         self.pdf_parser = PdfPjerjParser()
