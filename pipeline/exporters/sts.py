@@ -6,13 +6,9 @@ from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spell
 
 
 class StsExporter:
-
     TEXT_FIELD = 'ementa'
-
     GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao'], 'assunto', 'assunto']
-
     SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv', 'pesquisas-prontas-stj.csv', 'pesquisas-prontas-pjerj.csv']
-
     HEADER = {'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
 
     def __init__(self):
@@ -29,15 +25,13 @@ class StsExporter:
             unsimilar_dataset = self._match_unsimilar_sentences(groups)
             self._accumulate_dataset(similar_dataset)
             self._accumulate_dataset(unsimilar_dataset)
-
         self._print_summary(self.sts_dataset, 'total')
+        self._save_sts_dataset(self.sts_dataset, 'full')
         train_dataset, dev_dataset, test_dataset = self._split_train_dataset()
         self._print_summary(train_dataset, 'train')
         self._save_sts_dataset(train_dataset, 'train')
-
         self._print_summary(dev_dataset, 'dev')
         self._save_sts_dataset(dev_dataset, 'dev')
-
         self._print_summary(test_dataset, 'test')
         self._save_sts_dataset(test_dataset, 'test')
         self.work_progress.show('STS dataset has finished!')
