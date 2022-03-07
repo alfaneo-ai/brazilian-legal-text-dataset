@@ -1,6 +1,5 @@
 import logging
 import os.path
-import time
 
 import requests
 
@@ -11,7 +10,6 @@ from pipeline.parsers import FgvHtmlParser
 SEARCH_URL = 'https://direitosp.fgv.br/publicacoes/livros-digitais'
 OUTPUT_DIRECTORY_PATH = 'output'
 BOOKS_DIRECTORY_PATH = 'books'
-HEADER = {'assunto': [], 'ementa': []}
 
 
 class FgvLivrosDigitais:
@@ -24,7 +22,6 @@ class FgvLivrosDigitais:
 
     def execute(self):
         logging.info('Iniciando a execução do Scrapper FGV Livros Digitais')
-        self.__clean_up_previous_execution()
         self.__get_documents_urls()
         self.__append_constitution_book_to_list()
         self.__create_temporary_directory()
@@ -34,9 +31,9 @@ class FgvLivrosDigitais:
             logging.info(f'Livro {book["titulo"]} baixado com sucesso')
         logging.info('O Scrapper FGV Livros Digitais foi finalizado com sucesso')
 
-    def __clean_up_previous_execution(self):
-        if self.directory_util.is_there_directory(BOOKS_DIRECTORY_PATH):
-            self.directory_util.delete_directory(BOOKS_DIRECTORY_PATH)
+    def __create_temporary_directory(self):
+        if self.directory_util.is_there_directory(BOOKS_DIRECTORY_PATH) is False:
+            self.directory_util.create_directory(BOOKS_DIRECTORY_PATH)
 
     def __get_documents_urls(self):
         response = requests.get(SEARCH_URL)
@@ -47,9 +44,6 @@ class FgvLivrosDigitais:
             'titulo': 'constituicao-e-o-supremo.pdf',
             'url': 'https://www.editoraforum.com.br/wp-content/uploads/2021/05/Constitui%C3%A7%C3%A3o-e-o-Supremo-Vers%C3%A3o-Completa-__-STF-Supremo-Tribunal-Federall.pdf'
         })
-
-    def __create_temporary_directory(self):
-        self.directory_util.create_directory(BOOKS_DIRECTORY_PATH)
 
     def __set_current_book_attributes(self, book):
         self.current_content = requests.get(book['url']).content
