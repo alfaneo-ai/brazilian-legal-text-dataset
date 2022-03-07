@@ -1,5 +1,5 @@
 from .exporters import mlm_exporter, sts_exporter, query_exporter
-from .parsers import mlm_parsers
+from .parsers import mlm_parsers, sts_parsers
 from .scrapers import mlm_scrapers, sts_scrapers
 from .utils import WorkProgress
 
@@ -26,10 +26,13 @@ class StsPipelineManager:
         self.work_progress = WorkProgress()
 
     def execute(self, task):
+        self.work_progress.show('Starting a STS pipeline')
         if task in ['all', 'scrap']:
             for scraper in sts_scrapers:
                 scraper.execute()
-        self.work_progress.show('Starting a STS pipeline')
+        if task in ['all', 'parse']:
+            for parser in sts_parsers:
+                parser.execute()
         if task in ['all', 'export']:
             sts_exporter.execute()
         self.work_progress.show('STS Pipeline has finished!')

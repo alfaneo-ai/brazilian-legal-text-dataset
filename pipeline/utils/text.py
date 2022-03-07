@@ -2,6 +2,8 @@ import re
 import string
 import unicodedata
 
+from slugify import slugify as slugifylib
+
 
 class TextUtil:
     @staticmethod
@@ -46,3 +48,6 @@ class TextUtil:
         phrase = re.sub('<[^>]+>', ' ', phrase)
         return unicodedata.normalize('NFKD', phrase).strip()
 
+    @staticmethod
+    def slugify(phrase):
+        return slugifylib(phrase)
