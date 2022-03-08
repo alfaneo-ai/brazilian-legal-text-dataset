@@ -1,5 +1,7 @@
 import os
 
+from sklearn.model_selection import train_test_split
+
 from pipeline.utils import WorkProgress, DatasetManager, PathUtil, Statistic
 
 
@@ -9,52 +11,46 @@ class MlmExporter:
     def __init__(self):
         self.work_progress = WorkProgress()
         self.dataset_manager = DatasetManager()
-        self.big_sentences_counter = 0
-        self.bigger_sentences = []
-        self.lines_seen = set()
         self.statistic = Statistic()
+        self.corpus_path = PathUtil.build_path('output', 'mlm')
 
     def execute(self):
         self.work_progress.show('Merging all text files')
-        corpus_path = PathUtil.build_path('output', 'mlm')
-        outfilepath = PathUtil.join(corpus_path, 'corpus.txt')
-        if os.path.exists(outfilepath):
-            os.remove(outfilepath)
-        source_path = PathUtil.build_path('output', 'mlm')
-        filepaths = PathUtil.get_files(source_path, '*.txt')
-        outfile = open(outfilepath, 'wb')
-        for filepath in filepaths:
-            self._process_document(filepath, outfile)
-        outfile.close()
-        stats = self.statistic.calculate_textfile(outfilepath)
-        self._show_statistics(stats)
+        sourcefiles = self._get_source_files()
+        sentences = self._read_sentences(sourcefiles)
+        self._show_statistics(sentences)
+        train, dev = self._split_sentences(sentences)
+        self._save_sentences(train, 'corpus_train.txt')
+        self._save_sentences(dev, 'corpus_dev.txt')
         self.work_progress.show('Merging has finished!')
 
-    def _process_document(self, infilepath, outfile):
-        filename = PathUtil.get_filename(infilepath)
-        self.work_progress.show(f'Merging {filename}')
-        with open(infilepath, 'rb') as infile:
-            lines = infile.readlines()
-            lines = self._pre_textlines(lines)
-            if len(lines) > 0:
-                for line in lines:
-                    if line not in self.lines_seen:
-                        outfile.write(f'{line}\n'.encode())
-                        self.lines_seen.add(line)
-                # outfile.write('\n'.encode())
+    @staticmethod
+    def _get_source_files():
+        source_path = PathUtil.build_path('output', 'mlm')
+        filepaths = PathUtil.get_files(source_path, '*.txt')
+        return filepaths
 
-    def _pre_textlines(self, textlines):
-        result = []
-        for line in textlines:
-            line_str = line.decode('utf-8')
-            line_str = line_str.strip()
-            tokens = line_str.split()
+    def _read_sentences(self, sourcefiles):
+        sentences = set()
+        for filepath in sourcefiles:
+            filename = PathUtil.get_filename(filepath)
+            self.work_progress.show(f'Merging {filename}')
+            with open(filepath, 'rb') as fileinput:
+                lines = fileinput.readlines()
+                self._add_sentences(lines, sentences)
+        return sentences
+
+    def _add_sentences(self, lines, sentences):
+        for line in lines:
+            linetext = line.decode('utf-8')
+            linetext = linetext.strip()
+            tokens = linetext.split()
             size = len(tokens)
             if size >= self.MINIMAL_TOKENS:
-                result.append(line_str)
-        return result
+                sentences.add(linetext)
 
-    def _show_statistics(self, statistics):
+    def _show_statistics(self, sentences):
+        statistics = self.statistic.calculate_sentences(sentences)
         self.work_progress.show(f'Up to 64: {statistics["64"][0]}% - {statistics["64"][1]} samples')
         self.work_progress.show(f'Up to 128: {statistics["128"][0]}% - {statistics["128"][1]} samples')
         self.work_progress.show(f'Up to 256: {statistics["256"][0]}% - {statistics["256"][1]} samples')
@@ -63,3 +59,25 @@ class MlmExporter:
         self.work_progress.show(f'Up to 768: {statistics["768"][0]}% - {statistics["768"][1]} samples')
         self.work_progress.show(f'Up to 1024: {statistics["1024"][0]}% - {statistics["1024"][1]} samples')
         self.work_progress.show(f'Greate than 1024: {statistics["more"][0]}% - {statistics["more"][1]} samples')
+
+    @staticmethod
+    def _split_sentences(sentences):
+        train_samples, dev_samples = train_test_split(sentences,
+                                                      train_size=0.85,
+                                                      test_size=0.15,
+                                                      random_state=103,
+                                                      shuffle=True)
+        return train_samples, dev_samples
+
+    def _save_sentences(self, sentences, filename):
+        filepath = PathUtil.join(self.corpus_path, filename)
+        self._remove_oldfile(filepath)
+        outfile = open(filepath, 'wb')
+        for sentence in sentences:
+            outfile.write(f'{sentence}\n'.encode())
+        outfile.close()
+
+    @staticmethod
+    def _remove_oldfile(filepath):
+        if os.path.exists(filepath):
+            os.remove(filepath)

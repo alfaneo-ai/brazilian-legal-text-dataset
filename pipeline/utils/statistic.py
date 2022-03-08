@@ -4,9 +4,7 @@ import pandas as pd
 class Statistic:
 
     @staticmethod
-    def calculate_textfile(filepath: str):
-        with open(filepath) as f:
-            sentences = f.readlines()
+    def calculate_sentences(sentences: str):
         return Statistic.__calculate_sentences(sentences)
 
     @staticmethod
