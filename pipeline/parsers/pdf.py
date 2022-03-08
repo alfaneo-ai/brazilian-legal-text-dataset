@@ -81,6 +81,7 @@ class PdfFgvParser:
         self.__log_number_of_files_found()
         self.__create_extracted_books_directory()
         for file in self.file_name_list:
+            print(file)
             self.__extract_text_from_file(file)
             self.__tokenize_text_by_sentences()
             self.__clean_sentences()
