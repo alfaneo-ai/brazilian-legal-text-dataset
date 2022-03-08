@@ -7,7 +7,7 @@ from .pjerj import PjerjPesquisaProntaScrapper
 from .fgv import FgvLivrosDigitais
 
 mlm_scrapers = [CjfThesaurusScraper(), PlanaltoLawScraper(), PucEnciclopediaJuridicaScraper(),
-                StfSumulaScraper(), StfIudiciumScraper()]
+                StfSumulaScraper(), StfIudiciumScraper(), FgvLivrosDigitais()]
 
 
-sts_scrapers = [FgvLivrosDigitais(), PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]
+sts_scrapers = [PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]

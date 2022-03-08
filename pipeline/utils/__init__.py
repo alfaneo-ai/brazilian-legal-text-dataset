@@ -4,3 +4,4 @@ from .progress import WorkProgress
 from .spelling import correct_spelling
 from .directory import DirectoryUtil
 from .text import TextUtil
+from .statistic import Statistic
