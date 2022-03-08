@@ -1,0 +1,1 @@
+from .publicacoes import TjmsPublicacoesScrapper

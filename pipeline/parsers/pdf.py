@@ -118,11 +118,15 @@ class PdfFgvParser:
         self.current_extracted_text = '\n'.join(text_treated)
 
     def __remove_unwanted_charset_from_sentence(self, sentence):
-        sentence_without_breaking_lines = TextUtil.remove_breaking_lines(sentence)
+        sentence_without_dashed_breaked_lines = TextUtil.remove_dashed_breaked_line(sentence)
+        sentence_without_breaking_lines = TextUtil.remove_breaking_lines(sentence_without_dashed_breaked_lines)
         sentence_without_tabs = TextUtil.remove_tabs(sentence_without_breaking_lines)
         sentence_without_blank_spaces = TextUtil.remove_multiple_blank_spaces(sentence_without_tabs)
         sentence_without_html_tags = TextUtil.remove_html_tags(sentence_without_blank_spaces)
-        self.current_tokenized_sentence = sentence_without_html_tags
+        sentence_with_converted_elipsis = TextUtil.convert_elipsis_to_code(sentence_without_html_tags)
+        sentence_without_multiples_dots = TextUtil.remove_multiples_dots(sentence_with_converted_elipsis)
+        sentence_without_special_charset = TextUtil.remove_special_charset(sentence_without_multiples_dots)
+        self.current_tokenized_sentence = TextUtil.convert_code_to_elipsis(sentence_without_special_charset)
 
     def __is_sentence_over_threshold(self):
         tokenized_sentence = tokenize.word_tokenize(self.current_tokenized_sentence.strip(), language='portuguese')

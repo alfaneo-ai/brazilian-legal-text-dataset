@@ -1,5 +1,6 @@
 import re
 
+from nltk import tokenize
 from .cleaner import Cleaner
 from bs4 import BeautifulSoup
 from .segmentation import DefaultSegmentation
@@ -140,7 +141,7 @@ class StjTotalHtmlParser:
         div_row = search_container.findAll('div', {'class': 'divRow'})
         div_cell = div_row[0].findAll('div', {'class': 'divCell'})
         total_label = div_cell[0].label.text.strip()
-        self.total_found = re.sub("[^0-9]", "", total_label)
+        self.total_found = re.sub('[^0-9]', '', total_label)
 
 
 class StjSearchHtmlParser:
@@ -209,3 +210,50 @@ class FgvHtmlParser:
                     'titulo': TextUtil.slugify(book_title) + '.pdf',
                     'url': book_url
                 })
+
+
+class CnjTotalHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.total = None
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        self.__get_total_from_html()
+        return int(self.total)
+
+    def __get_total_from_html(self):
+        self.total = self.html.find('div', {'class': 'panel-footer text-center'}).text
+        self.__remove_alphabetic_charsets()
+
+    def __remove_alphabetic_charsets(self):
+        self.total = tokenize.word_tokenize(self.total)
+        new_numbers = []
+        for splited_word in self.total:
+            if splited_word.isdigit() is True:
+                new_numbers.append(splited_word)
+        self.total = new_numbers[-1]
+
+
+class CnjSearchHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.main_url = 'https://bibliotecadigital.cnj.jus.br'
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        return self.__get_urls_from_page()
+
+    def __get_urls_from_page(self):
+        urls = []
+        docs_table = self.html.find('table', {'class': 'table'})
+        for index, document in enumerate(docs_table.findAll('tr')):
+            if index != 0:
+                doc_info = document.find('td', {'headers': 't2'})
+                doc_title = TextUtil.slugify(doc_info.text)
+                doc_url = doc_info.find('a')['href']
+                urls.append({
+                    'titulo': doc_title,
+                    'url': self.main_url + doc_url
+                })
+        return urls

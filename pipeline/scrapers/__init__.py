@@ -5,9 +5,12 @@ from .stf import StfSumulaScraper, StfIudiciumScraper
 from .stj import StjPesquisaProntaScraper
 from .pjerj import PjerjPesquisaProntaScrapper
 from .fgv import FgvLivrosDigitais
+from .tjms import TjmsPublicacoesScrapper
+from .cnj import CnjBibliotecaDigitalScraper
 
 mlm_scrapers = [CjfThesaurusScraper(), PlanaltoLawScraper(), PucEnciclopediaJuridicaScraper(),
-                StfSumulaScraper(), StfIudiciumScraper(), FgvLivrosDigitais()]
+                StfSumulaScraper(), StfIudiciumScraper()]
 
 
-sts_scrapers = [PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]
+# sts_scrapers = [TjmsPublicacoesScrapper(), FgvLivrosDigitais(), PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper(), ]
+sts_scrapers = [CnjBibliotecaDigitalScraper()]
