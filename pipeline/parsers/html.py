@@ -257,3 +257,18 @@ class CnjSearchHtmlParser:
                     'url': self.main_url + doc_url
                 })
         return urls
+
+
+class CnjDocumentHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.main_url = 'https://bibliotecadigital.cnj.jus.br'
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        return self.__get_download_url_from_page()
+
+    def __get_download_url_from_page(self):
+        table_container = self.html.find('table', {'class': 'table panel-body'})
+        download_btn = table_container.find('a', {'class': 'btn btn-primary'})['href']
+        return self.main_url + download_btn
