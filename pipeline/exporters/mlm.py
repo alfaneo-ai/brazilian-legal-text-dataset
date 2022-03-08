@@ -62,7 +62,7 @@ class MlmExporter:
 
     @staticmethod
     def _split_sentences(sentences):
-        train_samples, dev_samples = train_test_split(sentences,
+        train_samples, dev_samples = train_test_split(list(sentences),
                                                       train_size=0.85,
                                                       test_size=0.15,
                                                       random_state=103,
