@@ -35,7 +35,7 @@ class FileManager:
 
     def is_there_file(self, file_path):
         directory_path = PathUtil.build_path(self.working_directory, file_path)
-        self.file_system.is_there_file_or_directory(directory_path)
+        return self.file_system.is_there_file_or_directory(directory_path)
 
     def get_files(self, directory):
         directory_path = PathUtil.build_path(self.working_directory, directory)

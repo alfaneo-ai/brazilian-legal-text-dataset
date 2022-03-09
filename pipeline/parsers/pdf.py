@@ -15,7 +15,7 @@ from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 from nltk import tokenize
 
-from pipeline.utils import TextUtil, PathUtil, DirectoryUtil
+from pipeline.utils import TextUtil, PathUtil, DirectoryUtil, FileManager
 
 
 class PdfReader:
@@ -61,13 +61,14 @@ class PdfFgvParser:
     EXTRACTED_BOOK_PATH = 'extracted_books'
     PDF_EXTENSION = 'pdf'
     TXT_EXTENSION = 'txt'
-    WORD_PER_SENTENCE_THRESHOLD = 20
+    WORD_PER_SENTENCE_THRESHOLD = 10
 
     def __init__(self):
         self.complete_book_path = f'{self.OUTPUT_DIR_PATH}/{self.BOOKS_DIR_PATH}'
         self.complete_extracted_book_path = f'{self.OUTPUT_DIR_PATH}/{self.EXTRACTED_BOOK_PATH}'
         self.pdf_reader = PdfReader(self.complete_book_path)
         self.directory_util = DirectoryUtil(self.OUTPUT_DIR_PATH)
+        self.file_util = FileManager(self.OUTPUT_DIR_PATH)
         self.file_name_list = []
         self.current_extracted_text = None
         self.current_tokenized_sentence = None
@@ -76,23 +77,18 @@ class PdfFgvParser:
         self.total_words = 0
 
     def execute(self):
-        self.__clean_up_previous_execution()
         self.__get_file_name_list()
         self.__log_number_of_files_found()
         self.__create_extracted_books_directory()
         for file in self.file_name_list:
-            print(file)
-            self.__extract_text_from_file(file)
-            self.__tokenize_text_by_sentences()
-            self.__clean_sentences()
             self.__create_txt_file_name(file)
-            self.__write_extracted_content()
-            self.__log_succes_in_writing()
+            if not self.__does_file_exists():
+                self.__extract_text_from_file(file)
+                self.__tokenize_text_by_sentences()
+                self.__clean_sentences()
+                self.__write_extracted_content()
+                self.__log_succes_in_writing()
         self.__log_total_words_and_senteces_found()
-
-    def __clean_up_previous_execution(self):
-        if self.directory_util.is_there_directory(self.EXTRACTED_BOOK_PATH):
-            self.directory_util.delete_directory(self.EXTRACTED_BOOK_PATH)
 
     def __get_file_name_list(self):
         self.file_name_list = [file for file in listdir(self.complete_book_path) if isfile(join(self.complete_book_path, file))]
@@ -101,7 +97,14 @@ class PdfFgvParser:
         logging.info(f'Foram encontrados {len(self.file_name_list)} arquivos no diretório {self.complete_book_path}')
 
     def __create_extracted_books_directory(self):
-        self.directory_util.create_directory(self.EXTRACTED_BOOK_PATH)
+        if not self.directory_util.is_there_directory(self.EXTRACTED_BOOK_PATH):
+            self.directory_util.create_directory(self.EXTRACTED_BOOK_PATH)
+
+    def __create_txt_file_name(self, file):
+        self.current_file_name = re.sub(self.PDF_EXTENSION, self.TXT_EXTENSION, file)
+
+    def __does_file_exists(self):
+        return self.file_util.is_there_file(f'{self.EXTRACTED_BOOK_PATH}/{self.current_file_name}')
 
     def __extract_text_from_file(self, file):
         self.current_extracted_text = self.pdf_reader.read(file)
@@ -133,9 +136,6 @@ class PdfFgvParser:
         tokenized_sentence = tokenize.word_tokenize(self.current_tokenized_sentence.strip(), language='portuguese')
         self.total_words += len(tokenized_sentence)
         return len(tokenized_sentence) > self.WORD_PER_SENTENCE_THRESHOLD
-
-    def __create_txt_file_name(self, file):
-        self.current_file_name = re.sub(self.PDF_EXTENSION, self.TXT_EXTENSION, file)
 
     def __write_extracted_content(self):
         file_path = os.path.join(f'{self.complete_extracted_book_path}/{self.current_file_name}')
