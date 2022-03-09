@@ -7,18 +7,14 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 
-from pipeline.utils import PathUtil
-
 
 class PdfReader:
-    def __init__(self, working_directory):
-        self.working_directory = working_directory
 
-    def read(self, file_path):
-        complete_file_path = PathUtil.build_path(self.working_directory, file_path)
+    @staticmethod
+    def read(filepath):
         pdf_content = StringIO()
 
-        with open(complete_file_path, 'rb') as pdf_file:
+        with open(filepath, 'rb') as pdf_file:
             parser = PDFParser(pdf_file)
             document = PDFDocument(parser)
             pdf_resource_manager = PDFResourceManager()

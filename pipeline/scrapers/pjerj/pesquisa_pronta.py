@@ -24,7 +24,7 @@ class PjerjPesquisaProntaScrapper:
     def __init__(self):
         self.directory_util = DirectoryUtil(OUTPUT_DIRECTORY_PATH)
         self.html_parser = PjerjHtmlParser()
-        self.pdf_reader = PdfReader(DIRECTORY_PATH)
+        self.pdf_reader = PdfReader()
         self.pdf_parser = PdfPjerjParser()
         self.dataset_manager = DatasetManager()
         self.links = None
@@ -72,7 +72,8 @@ class PjerjPesquisaProntaScrapper:
             file.write(self.current_content)
 
     def __read_temporary_file(self):
-        self.current_pdf_content = self.pdf_reader.read(FILE_NAME)
+        filepath = PathUtil.build_path(FILE_NAME)
+        self.current_pdf_content = self.pdf_reader.read(filepath)
 
     def __split_file_content(self):
         self.current_pdf_content = self.pdf_parser.split_text_by_pattern(self.current_pdf_content)

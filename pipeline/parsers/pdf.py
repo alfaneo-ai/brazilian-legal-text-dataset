@@ -1,9 +1,8 @@
-import logging
 import re
 
 from nltk import tokenize
 
-from pipeline.utils import TextUtil, PathUtil, DirectoryUtil, FileManager, PdfReader
+from pipeline.utils import TextUtil, PathUtil, DirectoryUtil, FileManager, PdfReader, WorkProgress
 
 
 class PdfParser:
@@ -14,7 +13,8 @@ class PdfParser:
 
     def __init__(self):
         self.rootpath = f'{self.OUTPUT_DIR_PATH}'
-        self.pdf_reader = PdfReader(self.rootpath)
+        self.pdf_reader = PdfReader()
+        self.progress = WorkProgress()
         self.directory_util = DirectoryUtil(self.OUTPUT_DIR_PATH)
         self.file_util = FileManager(self.OUTPUT_DIR_PATH)
         self.file_name_list = []
@@ -41,16 +41,18 @@ class PdfParser:
         self.file_name_list = PathUtil.get_files(self.rootpath, f'*.{self.PDF_EXTENSION}')
 
     def __log_number_of_files_found(self):
-        logging.info(f'Foram encontrados {len(self.file_name_list)} arquivos no diretório {self.rootpath}')
+        self.progress.start(len(self.file_name_list))
+        self.progress.show(f'Found {len(self.file_name_list)} files in {self.rootpath}')
 
     def __create_txt_filename(self, file):
-        self.current_filepath = re.sub(self.PDF_EXTENSION, self.TXT_EXTENSION, file)
+        self.current_filepath = PathUtil.build_path(re.sub(self.PDF_EXTENSION, self.TXT_EXTENSION, file))
 
     def __does_file_exists(self):
         return self.file_util.is_there_file(self.current_filepath)
 
-    def __extract_text_from_file(self, file):
-        self.current_extracted_text = self.pdf_reader.read(file)
+    def __extract_text_from_file(self, relativepath):
+        filepath = PathUtil.build_path(relativepath)
+        self.current_extracted_text = self.pdf_reader.read(filepath)
 
     def __tokenize_text_by_sentences(self):
         self.current_extracted_text = tokenize.sent_tokenize(self.current_extracted_text, language='portuguese')
@@ -85,7 +87,7 @@ class PdfParser:
             text.writelines(self.current_extracted_text)
 
     def __log_succes_in_writing(self):
-        logging.info(f'O texto {self.current_filepath} foi escrito com sucesso')
+        self.progress.step(f'{self.current_filepath} processed')
 
     def __log_total_words_and_senteces_found(self):
-        logging.info(f'Foram processadas {self.total_words} palavras em {self.total_sentences} sentenças')
+        self.progress.show(f'{self.total_words} words in {self.total_sentences} sentences')
