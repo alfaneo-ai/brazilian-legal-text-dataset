@@ -1,10 +1,11 @@
 import logging
+import re
 
-import requests
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
 from pipeline.utils import PathUtil, DatasetManager
-from pipeline.parsers import StjTotalHtmlParser, StjSearchHtmlParser
 
 FIRST_PAGE_COUNT = 0
 HEADER = {'assunto': [], 'ementa': []}
@@ -176,3 +177,60 @@ class SearchPage:
     def __make_request(self, subject):
         response = requests.post(url=URL, data=self.body)
         return self.parser.execute(response, subject)
+
+
+class StjTotalHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.total_found = None
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        self.__get_total_from_html()
+        return self.total_found
+
+    def __get_total_from_html(self):
+        search_container = self.html.find('div', {'id': 'infopesquisa'})
+        div_row = search_container.findAll('div', {'class': 'divRow'})
+        div_cell = div_row[0].findAll('div', {'class': 'divCell'})
+        total_label = div_cell[0].label.text.strip()
+        self.total_found = re.sub('[^0-9]', '', total_label)
+
+
+class StjSearchHtmlParser:
+    def __init__(self):
+        self.subject = None
+        self.html = None
+        self.documents_found = None
+
+    def execute(self, response, subject):
+        self.subject = subject
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        self.__get_documents_from_html()
+        return self.__extract_metadata_from_documents()
+
+    def __get_documents_from_html(self):
+        documents_container = self.html.find('div', {'class': 'listadocumentos'})
+        self.documents_found = documents_container.findAll('div', {'class', 'documento'})
+
+    def __extract_metadata_from_documents(self):
+        metadata_from_document = []
+        for document in self.documents_found:
+            metadata = {'assunto': self.subject}
+            for field in document.findAll('div', {'class': 'paragrafoBRS'}):
+                field_name = field.find('div', {'class': 'docTitulo'}).text
+                if field_name == 'Ementa':
+                    field_content = self.__remove_unwanted_characters(field.find('div', {'class': 'docTexto'}).text)
+                    if self.__does_sentence_exist(field_content):
+                        metadata['ementa'] = self.__remove_unwanted_characters(field_content)
+                        metadata_from_document.append(metadata)
+        return metadata_from_document
+
+    @staticmethod
+    def __remove_unwanted_characters(phrase):
+        new_phrase = re.sub(' +', ' ', phrase)
+        return re.sub('[\r\n]"', ' ', new_phrase)
+
+    @staticmethod
+    def __does_sentence_exist(sentence):
+        return len(sentence.split()) > 10

@@ -1,12 +1,12 @@
 import logging
 import os.path
+import re
 
-import requests
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
-from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager
-from pipeline.parsers import PdfReader, PdfPjerjParser, PjerjHtmlParser
-
+from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager, PdfReader, TextUtil
 
 OUTPUT_DIRECTORY_PATH = 'output'
 RESOURCES_DIRECTORY_PATH = 'resources'
@@ -108,3 +108,59 @@ class PjerjPesquisaProntaScrapper:
         dataframe = dataframe.append(METADATA, ignore_index=True)
         filepath = PathUtil.build_path(RESOURCES_DIRECTORY_PATH, SPREAD_SHEET_NAME)
         self.dataset_manager.to_csv(dataframe, filepath, index=False)
+
+
+class PjerjHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.unformatted_links = None
+        self.links = []
+        self.main_container_class = 'webcontent'
+        self.target_tag_name = '_blank'
+        self.link_starts_with = '/documents/'
+        self.base_url = 'http://portaltj.tjrj.jus.br'
+
+    def execute(self, response):
+        self.__extract_html_from_response(response)
+        self.__get_links_from_html()
+        self.__remove_unwanted_urls()
+        return self.links
+
+    def __extract_html_from_response(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+
+    def __get_links_from_html(self):
+        content_container = self.html.find('div', {'class': self.main_container_class})
+        self.unformatted_links = content_container.findAll('a', {'target': self.target_tag_name})
+
+    def __remove_unwanted_urls(self):
+        for link in self.unformatted_links:
+            link_href = link['href']
+            if self.__is_link_from_document(link_href):
+                formated_link = self.__format_url(link_href)
+                self.links.append(formated_link)
+
+    def __is_link_from_document(self, link):
+        return link.startswith(self.link_starts_with)
+
+    def __format_url(self, url):
+        if self.base_url not in url:
+            return self.base_url + url
+
+
+class PdfPjerjParser:
+    def __init__(self):
+        self.split_pattern = '={3,}'
+        self.subject_split_pattern = 'Banco'
+        self.ementa_search_pattern = r'CÂMARA CÍVEL(.*?)Íntegra do Acórdão'
+
+    def split_text_by_pattern(self, text):
+        return re.split(self.split_pattern, text)
+
+    def extract_subject_from_text(self, text):
+        subject = re.split(self.subject_split_pattern, text)
+        return TextUtil.remove_breaking_lines(subject[0])
+
+    def extract_ementa_from_text(self, text):
+        formated_text = TextUtil.remove_breaking_lines(text)
+        return re.search(self.ementa_search_pattern, formated_text).group(1)

@@ -1,9 +1,11 @@
 import logging
 import os.path
-import requests
 
-from pipeline.parsers import CnjTotalHtmlParser, CnjSearchHtmlParser, CnjDocumentHtmlParser
-from pipeline.utils import PathUtil, DirectoryUtil
+import requests
+from bs4 import BeautifulSoup
+from nltk import tokenize
+
+from pipeline.utils import PathUtil, DirectoryUtil, TextUtil
 
 MAIN_URL = 'https://bibliotecadigital.cnj.jus.br/jspui/browse?'
 DOC_PER_PAGE = 100
@@ -127,7 +129,7 @@ class DocumentPage:
     def __make_request(self, url):
         response = requests.get(url)
         self.parsed_url = self.parser.execute(response)
-        
+
 
 class DownloadPage:
     def __init__(self):
@@ -139,3 +141,65 @@ class DownloadPage:
 
     def __make_requests(self, url):
         self.content = requests.get(url).content
+
+
+class CnjTotalHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.total = None
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        self.__get_total_from_html()
+        return int(self.total)
+
+    def __get_total_from_html(self):
+        self.total = self.html.find('div', {'class': 'panel-footer text-center'}).text
+        self.__remove_alphabetic_charsets()
+
+    def __remove_alphabetic_charsets(self):
+        self.total = tokenize.word_tokenize(self.total)
+        new_numbers = []
+        for splited_word in self.total:
+            if splited_word.isdigit() is True:
+                new_numbers.append(splited_word)
+        self.total = new_numbers[-1]
+
+
+class CnjSearchHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.main_url = 'https://bibliotecadigital.cnj.jus.br'
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        return self.__get_urls_from_page()
+
+    def __get_urls_from_page(self):
+        urls = []
+        docs_table = self.html.find('table', {'class': 'table'})
+        for index, document in enumerate(docs_table.findAll('tr')):
+            if index != 0:
+                doc_info = document.find('td', {'headers': 't2'})
+                doc_title = TextUtil.slugify(doc_info.text)
+                doc_url = doc_info.find('a')['href']
+                urls.append({
+                    'titulo': doc_title,
+                    'url': self.main_url + doc_url
+                })
+        return urls
+
+
+class CnjDocumentHtmlParser:
+    def __init__(self):
+        self.html = None
+        self.main_url = 'https://bibliotecadigital.cnj.jus.br'
+
+    def execute(self, response):
+        self.html = BeautifulSoup(response.text, 'html.parser')
+        return self.__get_download_url_from_page()
+
+    def __get_download_url_from_page(self):
+        table_container = self.html.find('table', {'class': 'table panel-body'})
+        download_btn = table_container.find('a', {'class': 'btn btn-primary'})['href']
+        return self.main_url + download_btn

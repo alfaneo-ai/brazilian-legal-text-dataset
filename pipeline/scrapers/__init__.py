@@ -17,4 +17,6 @@ mlm_scrapers = [TjmsPublicacoesScrapper(),
                 StfSumulaScraper(),
                 StfIudiciumScraper()]
 
+mlm_scrapers = [TjmsPublicacoesScrapper(), FgvLivrosDigitais()]
+
 sts_scrapers = [PjerjPesquisaProntaScrapper(), StjPesquisaProntaScraper()]

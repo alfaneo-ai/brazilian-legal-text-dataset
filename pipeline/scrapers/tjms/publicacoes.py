@@ -1,9 +1,8 @@
-import logging
 import os.path
 
 import requests
 
-from pipeline.utils import DirectoryUtil, PathUtil
+from pipeline.utils import DirectoryUtil, PathUtil, WorkProgress
 
 URLS = ['https://www.tjms.jus.br/storage/cms-arquivos/315fb9ed6a14ebd859c932e47e042a0e.pdf',
         'https://www.tjms.jus.br/storage/cms-arquivos/e91a0438b8e7f1b60ec87eabdca89d2d.pdf',
@@ -58,8 +57,9 @@ URLS = ['https://www.tjms.jus.br/storage/cms-arquivos/315fb9ed6a14ebd859c932e47e
         'https://www.tjms.jus.br/_estaticos_/sc/publicacoes/relatorio-gestao-2009-2010.pdf',
         'https://www.tjms.jus.br/_estaticos_/sc/publicacoes/publica20anos.pdf',
         'https://www.tjms.jus.br/_estaticos_/sc/publicacoes/publica15anos.pdf']
-OUTPUT_DIRECTORY_PATH = 'output'
-BOOKS_DIRECTORY_PATH = 'books'
+
+OUTPUT_DIRECTORY_PATH = 'output/mlm'
+BOOKS_DIRECTORY_PATH = 'books_tjms'
 
 
 class TjmsPublicacoesScrapper:
@@ -67,14 +67,17 @@ class TjmsPublicacoesScrapper:
         self.directory_util = DirectoryUtil(OUTPUT_DIRECTORY_PATH)
         self.current_content = None
         self.current_filepath = None
+        self.progress = WorkProgress()
 
     def execute(self):
-        logging.info('Iniciando execução do Scrapper TJMS Publicações')
+        self.progress.show('Iniciando execução do Scrapper TJMS Publicações')
         self.__create_temporary_directory()
+        self.progress.start(len(URLS))
         for index, url in enumerate(URLS):
             self.__set_current_file_attributes(index, url)
             self.__download_file()
-        logging.info('O Scrapper TJMS Publicações foi finalizado com sucesso')
+            self.progress.step(f'Download: {url}')
+        self.progress.show('O Scrapper TJMS Publicações foi finalizado com sucesso')
 
     def __create_temporary_directory(self):
         if self.directory_util.is_there_directory(BOOKS_DIRECTORY_PATH) is False:
@@ -82,7 +85,7 @@ class TjmsPublicacoesScrapper:
 
     def __set_current_file_attributes(self, index, url):
         self.current_content = requests.get(url).content
-        self.current_filepath = f'{OUTPUT_DIRECTORY_PATH}/{BOOKS_DIRECTORY_PATH}/pub-{index+1}.pdf'
+        self.current_filepath = f'{OUTPUT_DIRECTORY_PATH}/{BOOKS_DIRECTORY_PATH}/pub-{index + 1}.pdf'
 
     def __download_file(self):
         filepath = os.path.join(self.current_filepath)

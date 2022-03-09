@@ -1,13 +1,15 @@
-from .html import HtmlParser, ParagraphHtmlSelector, SumulaHtmlSelector, EnciclopediaHtmlSelector, PjerjHtmlParser, \
-    StjTotalHtmlParser, StjSearchHtmlParser, FgvHtmlParser, CnjTotalHtmlParser, CnjSearchHtmlParser, CnjDocumentHtmlParser
+from .html import HtmlParser, ParagraphHtmlSelector, SumulaHtmlSelector, EnciclopediaHtmlSelector
 from .iudicium import IudiciumParser
-from .pdf import PdfReader, PdfPjerjParser, PdfFgvParser
+from .pdf import PdfParser
 
 law_parser = HtmlParser(ParagraphHtmlSelector(), 'planalto')
 sumula_parser = HtmlParser(SumulaHtmlSelector(), 'stf')
 enciclopedia_parser = HtmlParser(EnciclopediaHtmlSelector(), 'puc', True)
 iudicium_parser = IudiciumParser()
+pdf_parser = PdfParser()
 
-mlm_parsers = [law_parser, sumula_parser, enciclopedia_parser, iudicium_parser]
+mlm_parsers = [law_parser, sumula_parser, enciclopedia_parser, iudicium_parser, pdf_parser]
 
-sts_parsers = [PdfFgvParser()]
+mlm_parsers = [pdf_parser]
+
+sts_parsers = []
