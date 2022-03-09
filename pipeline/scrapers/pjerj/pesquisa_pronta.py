@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager, PdfReader, TextUtil
+from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager, PdfReader, TextUtil, WorkProgress
 
 OUTPUT_DIRECTORY_PATH = 'output'
 RESOURCES_DIRECTORY_PATH = 'resources'
@@ -26,6 +26,7 @@ class PjerjPesquisaProntaScrapper:
         self.html_parser = PjerjHtmlParser()
         self.pdf_reader = PdfReader()
         self.pdf_parser = PdfPjerjParser()
+        self.progess = WorkProgress()
         self.dataset_manager = DatasetManager()
         self.links = None
         self.current_content = None
@@ -34,10 +35,11 @@ class PjerjPesquisaProntaScrapper:
         self.current_ementas = []
 
     def execute(self):
-        logging.info(f'Iniciando a execução do Scrapper PJERJ Pesquisa Pronta')
+        self.progess.show(f'Starting Scrapper PJERJ Selected Cases execution')
         self.__clean_up_previous_execution()
         self.__get_documents_links()
         self.__create_temporary_directory()
+        self.progess.start(len(self.links))
         for link in self.links:
             self.__get_document_content(link)
             self.__download_temporary_file()
@@ -48,8 +50,9 @@ class PjerjPesquisaProntaScrapper:
                 self.__extract_ementas_from_text()
                 self.__append_data_to_list()
                 self.__reset_current_indexes()
+                self.progess.step(f'Download: {link}')
         self.__create_spreadsheet_dataset()
-        logging.info('O Scrapper PJERJ Pesquisa Pronta foi finalizado com sucesso')
+        self.progess.show('Scrapper PJERJ Selected Cases was successfully completed')
 
     def __clean_up_previous_execution(self):
         if self.directory_util.is_there_directory(FILES_DIRECTORY_PATH):

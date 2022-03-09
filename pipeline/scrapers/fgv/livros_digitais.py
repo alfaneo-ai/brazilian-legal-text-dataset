@@ -20,7 +20,7 @@ class FgvLivrosDigitais:
         self.current_filepath = None
 
     def execute(self):
-        self.progress.show('Starting Scrapper FGV Livros Digitais')
+        self.progress.show('Starting Scrapper FGV Digital Books')
         self.__get_documents_urls()
         self.__append_constitution_book_to_list()
         self.__create_temporary_directory()
@@ -29,7 +29,7 @@ class FgvLivrosDigitais:
             self.__set_current_book_attributes(book)
             self.__download_book()
             self.progress.step(f'Book {book["titulo"]} download done')
-        self.progress.show('FGV Livros Digitais scrapper has finished')
+        self.progress.show('FGV Digital Books scrapper has finished')
 
     def __create_temporary_directory(self):
         if self.directory_util.is_there_directory(BOOKS_DIRECTORY_PATH) is False:
