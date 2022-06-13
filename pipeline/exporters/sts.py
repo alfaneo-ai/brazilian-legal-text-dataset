@@ -8,8 +8,11 @@ from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spell
 class StsExporter:
     TEXT_FIELD = 'ementa'
     GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao'], 'assunto', 'assunto']
-    SOURCE_FILENAMES = ['pesquisas-prontas-tjms.csv', 'pesquisas-prontas-stf.csv', 'pesquisas-prontas-stj.csv', 'pesquisas-prontas-pjerj.csv']
-    HEADER = {'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
+    SOURCE_FILENAMES = {'TJMS': 'pesquisas-prontas-tjms.csv',
+                        'STF': 'pesquisas-prontas-stf.csv',
+                        'STJ': 'pesquisas-prontas-stj.csv',
+                        'PJERJ': 'pesquisas-prontas-pjerj.csv'}
+    HEADER = {'origem': [], 'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
 
     def __init__(self):
         self.work_progress = WorkProgress()
@@ -18,11 +21,12 @@ class StsExporter:
 
     def execute(self):
         self.work_progress.show('Preparing dataset for STS')
-        for index, filename in enumerate(self.SOURCE_FILENAMES):
+        for index, source in enumerate(self.SOURCE_FILENAMES.keys()):
+            filename = self.SOURCE_FILENAMES[source]
             dataset = self._read_annotated_dataset(filename)
             groups = self._get_groups_from_dataset(dataset, index)
-            similar_dataset = self._match_similar_sentences(groups)
-            unsimilar_dataset = self._match_unsimilar_sentences(groups)
+            similar_dataset = self._match_similar_sentences(source, groups)
+            unsimilar_dataset = self._match_unsimilar_sentences(source, groups)
             self._accumulate_dataset(similar_dataset)
             self._accumulate_dataset(unsimilar_dataset)
         self._print_summary(self.sts_dataset, 'total')
@@ -45,7 +49,7 @@ class StsExporter:
         group_fields = self.GROUP_FIELDS[index]
         return annotated_dataset.groupby(group_fields)
 
-    def _match_similar_sentences(self, groups):
+    def _match_similar_sentences(self, source, groups):
         self.work_progress.show('Match similar sentences')
         sts_dataset = pd.DataFrame(self.HEADER)
         for group_name, group in groups:
@@ -54,11 +58,11 @@ class StsExporter:
             for pair in pairs:
                 sentence1 = group.loc[pair[0]]
                 sentence2 = group.loc[pair[1]]
-                item = self._create_item(group_name, sentence1, sentence2, similarity=1)
+                item = self._create_item(source, group_name, sentence1, sentence2, similarity=1)
                 sts_dataset = sts_dataset.append(item, ignore_index=True)
         return sts_dataset
 
-    def _match_unsimilar_sentences(self, groups):
+    def _match_unsimilar_sentences(self, source, groups):
         self.work_progress.show('Match unsimilar sentences')
         sts_dataset = pd.DataFrame(self.HEADER)
         group_pairs = list(pairwise(groups))
@@ -72,21 +76,22 @@ class StsExporter:
             for pair in sentence_pairs:
                 sentence1 = group1_data.loc[pair[0]]
                 sentence2 = group2_data.loc[pair[1]]
-                item = self._create_item(group1_name, sentence1, sentence2, similarity=0)
+                item = self._create_item(source, group1_name, sentence1, sentence2, similarity=0)
                 sts_dataset = sts_dataset.append(item, ignore_index=True)
             sentence_pairs = list(zip_offset(group1_data.index, group2_data.index, offsets=(0, 1), longest=False))
             for pair in sentence_pairs:
                 sentence1 = group1_data.loc[pair[0]]
                 sentence2 = group2_data.loc[pair[1]]
-                item = self._create_item(group2_name, sentence1, sentence2, similarity=0)
+                item = self._create_item(source, group2_name, sentence1, sentence2, similarity=0)
                 sts_dataset = sts_dataset.append(item, ignore_index=True)
         return sts_dataset
 
-    def _create_item(self, keygroup, sentence1, sentence2, similarity):
+    def _create_item(self, source, keygroup, sentence1, sentence2, similarity):
         assunto = keygroup
         if type(keygroup) == tuple:
             assunto = ' '.join(keygroup)
         return {
+            'origem': source,
             'assunto': assunto,
             'ementa1': correct_spelling(sentence1[self.TEXT_FIELD]),
             'ementa2': correct_spelling(sentence2[self.TEXT_FIELD]),
