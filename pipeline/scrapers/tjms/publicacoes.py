@@ -70,14 +70,14 @@ class TjmsPublicacoesScrapper:
         self.progress = WorkProgress()
 
     def execute(self):
-        self.progress.show('Iniciando execução do Scrapper TJMS Publicações')
+        self.progress.show('Starting Scrapper TJMS Publicated Books execution')
         self.__create_temporary_directory()
         self.progress.start(len(URLS))
         for index, url in enumerate(URLS):
             self.__set_current_file_attributes(index, url)
             self.__download_file()
             self.progress.step(f'Download: {url}')
-        self.progress.show('O Scrapper TJMS Publicações foi finalizado com sucesso')
+        self.progress.show('Scrapper TJMS Publicated Books was successfully completed')
 
     def __create_temporary_directory(self):
         if self.directory_util.is_there_directory(BOOKS_DIRECTORY_PATH) is False:

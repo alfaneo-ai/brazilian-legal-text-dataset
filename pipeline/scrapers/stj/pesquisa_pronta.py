@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from pipeline.utils import PathUtil, DatasetManager
+from pipeline.utils import PathUtil, DatasetManager, WorkProgress
 
 FIRST_PAGE_COUNT = 0
 HEADER = {'assunto': [], 'ementa': []}
@@ -83,27 +83,28 @@ class StjPesquisaProntaScraper(SearchMapper):
         self.total_page = TotalPage()
         self.search_page = SearchPage()
         self.dataset_manager = DatasetManager()
+        self.progress = WorkProgress()
         self.current_search_code = None
         self.total = None
         self.current_page = None
         self.count_page = None
 
     def execute(self):
-        logging.info('Iniciando a execução do Scrapper STJ Pesquisa Pronta')
+        self.progress.show('Starting Scrapper STJ Selected Cases execution')
         for subject in self.map.keys():
             self.current_search_code = self.get_map_value_by_key(subject)
             self.__get_total_found()
             self.__set_pages_counters()
-            logging.info(f'A consulta "{subject}" retornou {self.total} documento(s) em {self.count_page} página(s)')
+            self.progress.show(f'"{subject}" search returned {self.total} document(s) in {self.count_page} page(s)')
+            self.progress.start(len(self.count_page))
             while self.__has_next_page():
-                logging.info(f'Iniciando busca na página {self.current_page + PAGE_INCREMENT}')
+                self.progress.step(f'Starting search page {self.current_page + PAGE_INCREMENT}')
                 self.__get_metadata_from_page(subject)
                 self.search_page.execute(self.current_search_code, subject, self.current_page)
                 self.__increment_page_counters()
-        logging.info(f'O Scrapper processou um total de {len(METADATA)} documento(s) e está escrevendo o dataset '
-                     f'"pesquisas-prontas-stj.csv"')
+        self.progress.show(f'Scrapper process {len(METADATA)} documents(s) and started writing "pesquisas-prontas-stj.csv"')
         self.__create_spreasheet_dataset()
-        logging.info(f'O Scrapper STJ Pesquisa Pronta foi finalizado com sucesso')
+        self.progress.show(f'Scrapper STJ Selected Cases was successfully completed')
 
     def __get_total_found(self):
         self.total = int(self.total_page.execute(self.current_search_code))

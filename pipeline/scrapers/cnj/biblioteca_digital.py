@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from nltk import tokenize
 
-from pipeline.utils import PathUtil, DirectoryUtil, TextUtil
+from pipeline.utils import PathUtil, DirectoryUtil, TextUtil, WorkProgress
 
 MAIN_URL = 'https://bibliotecadigital.cnj.jus.br/jspui/browse?'
 DOC_PER_PAGE = 100
@@ -23,6 +23,7 @@ class CnjBibliotecaDigitalScraper:
         self.search_page = SearchPage()
         self.document_page = DocumentPage()
         self.download_page = DownloadPage()
+        self.progess = WorkProgress()
         self.directory_util = DirectoryUtil(OUTPUT_DIRECTORY_PATH)
         self.total = None
         self.current_page = 0
@@ -31,13 +32,13 @@ class CnjBibliotecaDigitalScraper:
         self.current_filepath = None
 
     def execute(self):
-        logging.info('Iniciando a execução do Scrapper Cnj Biblioteca Digital')
+        self.progess.show('Starting Scrapper CNJ Digital Library execution')
         self.__get_total_found()
-        logging.info(f'Forma encontrados {self.total} livros em {self.count_page} páginas')
+        self.progess.show(f'{self.total} books found in {self.count_page} search pages')
         self.__get_urls_from_pages()
         self.__create_temporary_directory()
         self.__download_docs()
-        logging.info('O Scrapper Cnj Biblioteca Digital foi finalizado com sucesso')
+        logging.info('Scrapper CNJ Digital Library Digital was successfully completed')
 
     def __get_total_found(self):
         self.total = self.total_page.execute()
@@ -50,8 +51,9 @@ class CnjBibliotecaDigitalScraper:
         self.current_page += 1
 
     def __get_urls_from_pages(self):
+        self.progess.start(len(self.count_page))
         while self.__has_next_page():
-            logging.info(f'Iniciando busca na página {self.current_page + 1}')
+            self.progess.step(f'Starting search on page {self.current_page + 1}')
             self.search_page.execute(self.current_page)
             self.__increment_page()
 
@@ -60,7 +62,7 @@ class CnjBibliotecaDigitalScraper:
             self.directory_util.create_directory(BOOKS_DIRECTORY_PATH)
 
     def __download_docs(self):
-        logging.info('Iniciando o downlaod dos livros digitais encontrados')
+        self.progess.step('Starting downlaod of digital books found')
         for document in URLS:
             download_url = self.document_page.execute(document['url'])
             if download_url.endswith('.pdf'):
