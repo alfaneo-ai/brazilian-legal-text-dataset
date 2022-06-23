@@ -13,6 +13,8 @@ class MlmExporter:
         self.dataset_manager = DatasetManager()
         self.statistic = Statistic()
         self.corpus_path = PathUtil.build_path('output', 'mlm')
+        self.source_counter = {'cjf': 0, 'cnj': 0, 'fgv': 0, 'planalto': 0, 'puc': 0, 'stf': 0, 'tjms': 0, 'other': 0}
+        self.counter = 0
 
     def execute(self):
         self.work_progress.show('Merging all text files')
@@ -35,21 +37,38 @@ class MlmExporter:
         for filepath in sourcefiles:
             filename = PathUtil.get_filename(filepath)
             self.work_progress.show(f'Merging {filename}')
+            source = self._get_sentence_source(filepath)
             with open(filepath, 'rb') as fileinput:
                 lines = fileinput.readlines()
-                self._add_sentences(lines, sentences)
+                self._add_sentences(source, lines, sentences)
         return sentences
 
-    def _add_sentences(self, lines, sentences):
+    def _get_sentence_source(self, filepath):
+        path_parts = filepath.split('/')[-5:]
+        for part in path_parts:
+            if part in self.source_counter.keys():
+                return part
+        return 'other'
+
+    def _add_sentences(self, source, lines, sentences):
         for line in lines:
             linetext = line.decode('utf-8')
             linetext = linetext.strip()
             tokens = linetext.split()
             size = len(tokens)
             if size >= self.MINIMAL_TOKENS:
-                sentences.add(linetext)
+                if not (linetext in sentences):
+                    sentences.add(linetext)
+                    self.source_counter[source] += 1
+                    self.counter += 1
 
     def _show_statistics(self, sentences):
+        self.work_progress.show(self.source_counter)
+        for key in self.source_counter.keys():
+            self.source_counter[key] = round(self.source_counter[key]/self.counter, 4)*100
+
+        self.work_progress.show(self.source_counter)
+
         statistics = self.statistic.calculate_sentences(sentences)
         self.work_progress.show(f'Up to 64: {statistics["64"][0]}% - {statistics["64"][1]} samples')
         self.work_progress.show(f'Up to 128: {statistics["128"][0]}% - {statistics["128"][1]} samples')
