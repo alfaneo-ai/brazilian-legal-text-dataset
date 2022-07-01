@@ -1,14 +1,27 @@
 import pandas as pd
+from itertools import combinations
 from more_itertools import pairwise, zip_offset
 from sklearn.model_selection import train_test_split
+import random
 
 from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spelling
 
+TEXT_FIELD = 'ementa'
+GROUP_FIELDS = ['area', 'tema', 'discussao']
+FILENAME = 'pesquisas-prontas-stf.csv'
+ANTAGONIC_AREAS = {
+    'Direito Administrativo': 'Direito Processual Penal',
+    'Direito Constitucional': 'Direito Processual Penal',
+    'Direito Eleitoral': 'Direito Previdenciário',
+    'Direito Penal': 'Direito Processual Civil',
+    'Direito Previdenciário': 'Direito Eleitoral',
+    'Direito Processual Civil': 'Direito Penal',
+    'Direito Processual Penal': 'Direito Processual Civil',
+    'Direito Tributário': 'Direito Processual Penal'
+}
+
 
 class StsScaleExporter:
-    TEXT_FIELD = 'ementa'
-    GROUP_FIELDS = ['area', 'tema', 'discussao']
-    FILENAME = 'pesquisas-prontas-stf.csv'
 
     def __init__(self):
         self.progress = Progress()
@@ -26,7 +39,7 @@ class StsScaleExporter:
         self.progress.finish_process()
 
     def _read_annotated_dataset(self):
-        filepath = PathUtil.build_path('resources', self.FILENAME)
+        filepath = PathUtil.build_path('resources', FILENAME)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _process_same_discussion_sentences(self):
@@ -74,13 +87,18 @@ class StsScaleExporter:
         self.progress.section_footer(samples)
 
     def _process_diff_area_sentences(self):
-        self.progress.section_header('4) DIFFERENT AREAS')
+        self.progress.section_header('4) ANTAGONIC AREAS')
         samples = self.sts_dataset.create_instance()
         areas = self.source_dataset.groupby(['area'])
-        areas_pairs = list(pairwise(areas))
+        groups = {key: (key, group) for key, group in areas}
+        areas_pairs = [((area_name, area), self._get_antagonic_area(groups, area_name)) for area_name, area in areas]
         samples = self._add_group_pairs(samples, areas_pairs, similarity=0)
         self.sts_dataset.accumulate(samples)
         self.progress.section_footer(samples)
+
+    @staticmethod
+    def _get_antagonic_area(area_groups, area_name):
+        return area_groups[ANTAGONIC_AREAS[area_name]]
 
     def _add_group_pairs(self, dataset, group_pairs, similarity):
         for group_pair in group_pairs:
@@ -97,21 +115,73 @@ class StsScaleExporter:
                 dataset = self._add_sample(dataset, sentence1, sentence2, similarity=similarity)
         return dataset
 
-    def _add_sample(self, samples, sentence1, sentence2, similarity):
+    @staticmethod
+    def _add_sample(samples, sentence1, sentence2, similarity):
         item = {
-            'ementa1': correct_spelling(sentence1[self.TEXT_FIELD]),
-            'ementa2': correct_spelling(sentence2[self.TEXT_FIELD]),
+            'ementa1': correct_spelling(sentence1[TEXT_FIELD]),
+            'ementa2': correct_spelling(sentence2[TEXT_FIELD]),
             'similarity': similarity
         }
         return samples.append(item, ignore_index=True)
 
     def _save_results(self):
-        all_samples = self.sts_dataset.samples
-        train_samples, eval_samples, test_samples = self.sts_dataset.split_train()
-        self.sts_dataset.save(all_samples, 'full')
-        self.sts_dataset.save(train_samples, 'train')
-        self.sts_dataset.save(eval_samples, 'eval')
-        self.sts_dataset.save(test_samples, 'test')
+        self.sts_dataset.save_results()
+
+
+class TripletScaleExporter:
+    def __init__(self):
+        self.progress = Progress()
+        self.sts_dataset = StsDataset(triplet=True)
+        self.source_dataset = None
+
+    def execute(self):
+        self.progress.start_process()
+        self._read_annotated_dataset()
+        self._process_diff_area_sentences()
+        self._save_results()
+        self.progress.finish_process()
+
+    def _read_annotated_dataset(self):
+        filepath = PathUtil.build_path('resources', FILENAME)
+        self.source_dataset = self.sts_dataset.read(filepath)
+
+    def _process_diff_area_sentences(self):
+        self.progress.section_header('START TRIPLET GENERATION')
+        samples = self.sts_dataset.create_instance()
+        areas = self.source_dataset.groupby(['area'])
+        groups = {key: group for key, group in areas}
+        for area_name, area in areas:
+            antagonic_area_name = ANTAGONIC_AREAS[area_name]
+            antagonic_area = groups[antagonic_area_name]
+            discussion = area.groupby(['discussao'])
+            for discussion_name, discussion in discussion:
+                samples = self._create_discussion_samples(antagonic_area, discussion, discussion_name, samples)
+        self.sts_dataset.accumulate(samples)
+        self.progress.section_footer(samples)
+
+    def _create_discussion_samples(self, antagonic_area, discussion, discussion_name, samples):
+        indexes = discussion.index
+        pairs = list(combinations(indexes, 2) if len(indexes) < 30 else pairwise(indexes))
+        for pair in pairs:
+            base = discussion.loc[pair[0]]
+            similar = discussion.loc[pair[1]]
+            ramdom_id = random.choices(list(antagonic_area.index))[0]
+            unsimilar = self.source_dataset.loc[ramdom_id]
+            samples = self._add_sample(samples, base, similar, unsimilar)
+        self.progress.show(f'Itens: {len(discussion)}, Pairs: {len(pairs)}, Discussion: "{discussion_name}"')
+        return samples
+
+    @staticmethod
+    def _add_sample(samples, base, similar, unsimilar):
+        item = {
+            'ementa1': correct_spelling(base[TEXT_FIELD]),
+            'ementa2': correct_spelling(similar[TEXT_FIELD]),
+            'ementa3': correct_spelling(unsimilar[TEXT_FIELD])
+        }
+        return samples.append(item, ignore_index=True)
+
+    def _save_results(self):
+        self.sts_dataset.save_results()
 
 
 class Progress:
@@ -142,36 +212,45 @@ class Progress:
 
 class StsDataset:
     HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
+    TRIPLEX_HEADER = {'ementa1': [], 'ementa2': [], 'ementa3': []}
 
-    def __init__(self):
+    def __init__(self, triplet=False):
         self.dataset_manager = DatasetManager()
-        self.samples = pd.DataFrame(self.HEADER)
+        self.triplet = triplet
+        self.samples = self.create_instance()
 
     def create_instance(self):
-        return pd.DataFrame(self.HEADER)
+        return pd.DataFrame(self.TRIPLEX_HEADER) if self.triplet else pd.DataFrame(self.HEADER)
 
     def accumulate(self, dataset):
         self.samples = self.samples.append(dataset, ignore_index=True)
 
-    def split_train(self):
+    def read(self, filepath):
+        return self.dataset_manager.from_csv(filepath)
+
+    def save_results(self):
+        train_samples, dev_samples, test_samples = self._split_train()
+        self._save(self.samples, 'full')
+        self._save(train_samples, 'train')
+        self._save(dev_samples, 'dev')
+        self._save(test_samples, 'test')
+
+    def _split_train(self):
         train_samples, alltest_samples = train_test_split(self.samples,
                                                           train_size=0.70,
                                                           test_size=0.30,
                                                           random_state=103,
                                                           shuffle=True)
-        eval_samples, test_samples = train_test_split(alltest_samples,
+        dev_samples, test_samples = train_test_split(alltest_samples,
                                                       train_size=0.25,
                                                       test_size=0.75,
                                                       random_state=99,
                                                       shuffle=True)
         train_samples = train_samples.reset_index(drop=True)
-        eval_samples = eval_samples.reset_index(drop=True)
+        dev_samples = dev_samples.reset_index(drop=True)
         test_samples = test_samples.reset_index(drop=True)
-        return train_samples, eval_samples, test_samples
+        return train_samples, dev_samples, test_samples
 
-    def read(self, filepath):
-        return self.dataset_manager.from_csv(filepath)
-
-    def save(self, dataset, name):
+    def _save(self, dataset, name):
         train_filepath = PathUtil.build_path('output', 'sts', f'{name}.csv')
         self.dataset_manager.to_csv(dataset, train_filepath)
