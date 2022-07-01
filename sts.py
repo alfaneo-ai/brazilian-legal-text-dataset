@@ -13,11 +13,18 @@ def parse_commands():
                         action='store',
                         default='all',
                         help='Set a target task (scrap, parse, export)')
+
+    parser.add_argument('--sts_type',
+                        action='store',
+                        default="binary",
+                        type=str,
+                        help='Define STS type (binary, scale and triplet)')
+
     args = vars(parser.parse_args())
-    return args['task']
+    return args['task'], args['sts_type']
 
 
 if __name__ == '__main__':
-    task = parse_commands()
+    task, sts_type = parse_commands()
     pipeline = StsPipelineManager()
-    pipeline.execute(task)
+    pipeline.execute(task, sts_type)

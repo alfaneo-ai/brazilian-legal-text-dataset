@@ -25,7 +25,7 @@ class StsPipelineManager:
     def __init__(self):
         self.work_progress = WorkProgress()
 
-    def execute(self, task):
+    def execute(self, task, sts_type):
         self.work_progress.show('Starting a STS pipeline')
         if task in ['all', 'scrap']:
             for scraper in sts_scrapers:
@@ -34,7 +34,7 @@ class StsPipelineManager:
             for parser in sts_parsers:
                 parser.execute()
         if task in ['all', 'export']:
-            sts_exporter.execute()
+            sts_exporter(sts_type).execute()
         self.work_progress.show('STS Pipeline has finished!')
 
 

@@ -1,8 +1,10 @@
-import pandas as pd
+import random
 from itertools import combinations
+from pathlib import Path
+
+import pandas as pd
 from more_itertools import pairwise, zip_offset
 from sklearn.model_selection import train_test_split
-import random
 
 from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spelling
 
@@ -125,13 +127,14 @@ class StsScaleExporter:
         return samples.append(item, ignore_index=True)
 
     def _save_results(self):
-        self.sts_dataset.save_results()
+        self.sts_dataset.save_results('scale')
 
 
-class TripletScaleExporter:
-    def __init__(self):
+class TripletAndBinaryExporter:
+    def __init__(self, is_triplet=True):
         self.progress = Progress()
-        self.sts_dataset = StsDataset(triplet=True)
+        self.is_triplet = is_triplet
+        self.sts_dataset = StsDataset(is_triplet=is_triplet)
         self.source_dataset = None
 
     def execute(self):
@@ -171,17 +174,32 @@ class TripletScaleExporter:
         self.progress.show(f'Itens: {len(discussion)}, Pairs: {len(pairs)}, Discussion: "{discussion_name}"')
         return samples
 
-    @staticmethod
-    def _add_sample(samples, base, similar, unsimilar):
-        item = {
-            'ementa1': correct_spelling(base[TEXT_FIELD]),
-            'ementa2': correct_spelling(similar[TEXT_FIELD]),
-            'ementa3': correct_spelling(unsimilar[TEXT_FIELD])
-        }
-        return samples.append(item, ignore_index=True)
+    def _add_sample(self, samples, base, similar, unsimilar):
+        if self.is_triplet:
+            item = {
+                'ementa1': correct_spelling(base[TEXT_FIELD]),
+                'ementa2': correct_spelling(similar[TEXT_FIELD]),
+                'ementa3': correct_spelling(unsimilar[TEXT_FIELD])
+            }
+            samples = samples.append(item, ignore_index=True)
+        else:
+            item_similar = {
+                'ementa1': correct_spelling(base[TEXT_FIELD]),
+                'ementa2': correct_spelling(similar[TEXT_FIELD]),
+                'similarity': 1
+            }
+            item_unsimilar = {
+                'ementa1': correct_spelling(base[TEXT_FIELD]),
+                'ementa2': correct_spelling(unsimilar[TEXT_FIELD]),
+                'similarity': 0
+            }
+            samples = samples.append(item_similar, ignore_index=True)
+            samples = samples.append(item_unsimilar, ignore_index=True)
+        return samples
 
     def _save_results(self):
-        self.sts_dataset.save_results()
+        output = 'triplet' if self.is_triplet else 'binary'
+        self.sts_dataset.save_results(output)
 
 
 class Progress:
@@ -212,15 +230,15 @@ class Progress:
 
 class StsDataset:
     HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
-    TRIPLEX_HEADER = {'ementa1': [], 'ementa2': [], 'ementa3': []}
+    TRIPLET_HEADER = {'ementa1': [], 'ementa2': [], 'ementa3': []}
 
-    def __init__(self, triplet=False):
+    def __init__(self, is_triplet=False):
         self.dataset_manager = DatasetManager()
-        self.triplet = triplet
+        self.is_triplet = is_triplet
         self.samples = self.create_instance()
 
     def create_instance(self):
-        return pd.DataFrame(self.TRIPLEX_HEADER) if self.triplet else pd.DataFrame(self.HEADER)
+        return pd.DataFrame(self.TRIPLET_HEADER) if self.is_triplet else pd.DataFrame(self.HEADER)
 
     def accumulate(self, dataset):
         self.samples = self.samples.append(dataset, ignore_index=True)
@@ -228,12 +246,12 @@ class StsDataset:
     def read(self, filepath):
         return self.dataset_manager.from_csv(filepath)
 
-    def save_results(self):
+    def save_results(self, root_dir):
         train_samples, dev_samples, test_samples = self._split_train()
-        self._save(self.samples, 'full')
-        self._save(train_samples, 'train')
-        self._save(dev_samples, 'dev')
-        self._save(test_samples, 'test')
+        self._save(self.samples, root_dir, 'full')
+        self._save(train_samples, root_dir, 'train')
+        self._save(dev_samples, root_dir, 'dev')
+        self._save(test_samples, root_dir, 'test')
 
     def _split_train(self):
         train_samples, alltest_samples = train_test_split(self.samples,
@@ -242,15 +260,17 @@ class StsDataset:
                                                           random_state=103,
                                                           shuffle=True)
         dev_samples, test_samples = train_test_split(alltest_samples,
-                                                      train_size=0.25,
-                                                      test_size=0.75,
-                                                      random_state=99,
-                                                      shuffle=True)
+                                                     train_size=0.25,
+                                                     test_size=0.75,
+                                                     random_state=99,
+                                                     shuffle=True)
         train_samples = train_samples.reset_index(drop=True)
         dev_samples = dev_samples.reset_index(drop=True)
         test_samples = test_samples.reset_index(drop=True)
         return train_samples, dev_samples, test_samples
 
-    def _save(self, dataset, name):
-        train_filepath = PathUtil.build_path('output', 'sts', f'{name}.csv')
-        self.dataset_manager.to_csv(dataset, train_filepath)
+    def _save(self, dataset, root_dir, name):
+        base_path = PathUtil.build_path('output', 'sts', root_dir)
+        Path(base_path).mkdir(parents=True, exist_ok=True)
+        filepath = PathUtil.join(base_path, f'{name}.csv')
+        self.dataset_manager.to_csv(dataset, filepath)

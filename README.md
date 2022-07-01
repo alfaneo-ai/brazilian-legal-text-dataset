@@ -31,7 +31,7 @@ python run.py export
 
 ## Generate STS Dataset
 To generate a dataset for STS BERT fine-tunning.
-Run the command below to execute all pipeline that will generate two files `output/sts/train.csv` and `output/sts/dev.csv`.
+Run the command below to execute all pipeline that will generate files in `output/sts/{type}/`.
 
 ```shell
 python sts.py all
