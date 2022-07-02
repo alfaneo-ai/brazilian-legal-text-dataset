@@ -50,7 +50,7 @@ class BenchmarkStsExporter:
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _match_similar_sentences(self, source_name):
-        self.progress.section_header('SIMILAR SENTENCES')
+        self.progress.section_header(f'SOURCE: {source_name} - SIMILAR SENTENCES')
         groups = self.source_dataset.groupby(self.GROUP_FIELD)
         for group_name, group in groups:
             pairs = list(pairwise(group.index))
@@ -58,16 +58,15 @@ class BenchmarkStsExporter:
                 sentence1 = group.loc[pair[0]]
                 sentence2 = group.loc[pair[1]]
                 self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=1)
-            self.progress.show(f'Itens: {len(group)}, Pairs: {len(pairs)}, Group: "{group_name}"')
         self.progress.section_footer(self.sts_dataset.samples)
 
     def _match_unsimilar_sentences(self, source_name):
-        self.progress.section_header('UNSIMILAR SENTENCES')
+        self.progress.section_header(f'SOURCE: {source_name} - UNSIMILAR SENTENCES')
         for index, row in self.source_dataset.iterrows():
             sentence1 = row
             group_name = row[self.GROUP_FIELD]
             diff_group = self.source_dataset.query(f'{self.GROUP_FIELD} != "{group_name}"')
-            sentence2 = diff_group.sample()
+            sentence2 = diff_group.sample(n=1, axis=0)
             self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=0)
         self.progress.section_footer(self.sts_dataset.samples)
 
@@ -79,7 +78,7 @@ class ScaleStsExporter:
 
     def __init__(self):
         self.progress = Progress()
-        self.sts_dataset = BinaryStsDataset()
+        self.sts_dataset = ScaleStsDataset()
         self.source_dataset = None
 
     def execute(self):
@@ -167,7 +166,7 @@ class ScaleStsExporter:
 class TripletAndBinaryStsExporter:
     def __init__(self, is_triplet=True):
         self.progress = Progress()
-        self.output_folder = 'triplet' if self.is_triplet else 'binary'
+        self.output_folder = 'triplet' if is_triplet else 'binary'
         self.sts_dataset = TripletStsDataset() if is_triplet else BinaryStsDataset()
         self.source_dataset = None
 
@@ -206,7 +205,7 @@ class TripletAndBinaryStsExporter:
         self.progress.show(f'Itens: {len(discussion)}, Pairs: {len(pairs)}, Discussion: "{discussion_name}"')
 
     def _save_results(self):
-        self.sts_dataset.save_results(self.output_folder)
+        self.sts_dataset.save_splited(self.output_folder)
 
 
 class Progress:
@@ -232,8 +231,6 @@ class Progress:
         increment = len(dataset) - self.last_rows
         self.work_progress.show(f'')
         self.work_progress.show(f'Step add more {increment} rows')
-        self.work_progress.show('')
-        self.work_progress.show('')
         self.work_progress.show('')
         self.last_rows = len(dataset)
 
@@ -297,6 +294,21 @@ class TripletStsDataset(StsDataset):
         self.samples = self.samples.append(item, ignore_index=True)
 
 
+class ScaleStsDataset(StsDataset):
+    HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
+
+    def create_instance(self):
+        return pd.DataFrame(self.HEADER)
+
+    def add_sample(self, sentence1, sentence2, similarity):
+        item = {
+            'ementa1': correct_spelling(sentence1[TEXT_FIELD]),
+            'ementa2': correct_spelling(sentence2[TEXT_FIELD]),
+            'similarity': similarity
+        }
+        self.samples = self.samples.append(item, ignore_index=True)
+
+
 class BinaryStsDataset(StsDataset):
     HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
 
@@ -328,8 +340,8 @@ class BenchmarkStsDataset(StsDataset):
         item = {
             'source': source_name,
             'group': group_name,
-            'ementa1': correct_spelling(sentence1[TEXT_FIELD]),
-            'ementa2': correct_spelling(sentence2[TEXT_FIELD]),
+            'ementa1': correct_spelling(str(sentence1[TEXT_FIELD])),
+            'ementa2': correct_spelling(str(sentence2[TEXT_FIELD])),
             'similarity': similarity
         }
         self.samples = self.samples.append(item, ignore_index=True)
