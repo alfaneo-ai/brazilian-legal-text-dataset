@@ -1,128 +1,335 @@
+import random
+from abc import ABC, abstractmethod
+from itertools import combinations
+from pathlib import Path
+
 import pandas as pd
 from more_itertools import pairwise, zip_offset
 from sklearn.model_selection import train_test_split
 
 from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spelling
 
+TEXT_FIELD = 'ementa'
+GROUP_FIELDS = ['area', 'tema', 'discussao']
+FILENAME = 'pesquisas-prontas-stf.csv'
+ANTAGONIC_AREAS = {
+    'Direito Administrativo': 'Direito Processual Penal',
+    'Direito Constitucional': 'Direito Processual Penal',
+    'Direito Eleitoral': 'Direito Previdenciário',
+    'Direito Penal': 'Direito Processual Civil',
+    'Direito Previdenciário': 'Direito Eleitoral',
+    'Direito Processual Civil': 'Direito Penal',
+    'Direito Processual Penal': 'Direito Processual Civil',
+    'Direito Tributário': 'Direito Processual Penal'
+}
 
-class StsExporter:
-    TEXT_FIELD = 'ementa'
-    GROUP_FIELDS = [['assunto'], ['area', 'tema', 'discussao'], 'assunto', 'assunto']
+
+class BenchmarkStsExporter:
+    GROUP_FIELD = 'assunto'
     SOURCE_FILENAMES = {'TJMS': 'pesquisas-prontas-tjms.csv',
-                        'STF': 'pesquisas-prontas-stf.csv',
                         'STJ': 'pesquisas-prontas-stj.csv',
                         'PJERJ': 'pesquisas-prontas-pjerj.csv'}
-    HEADER = {'origem': [], 'assunto': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
 
     def __init__(self):
-        self.work_progress = WorkProgress()
-        self.dataset_manager = DatasetManager()
-        self.sts_dataset = pd.DataFrame(self.HEADER)
+        self.progress = Progress()
+        self.sts_dataset = BenchmarkStsDataset()
+        self.source_dataset = None
 
     def execute(self):
-        self.work_progress.show('Preparing dataset for STS')
-        for index, source in enumerate(self.SOURCE_FILENAMES.keys()):
-            filename = self.SOURCE_FILENAMES[source]
-            dataset = self._read_annotated_dataset(filename)
-            groups = self._get_groups_from_dataset(dataset, index)
-            similar_dataset = self._match_similar_sentences(source, groups)
-            unsimilar_dataset = self._match_unsimilar_sentences(source, groups)
-            self._accumulate_dataset(similar_dataset)
-            self._accumulate_dataset(unsimilar_dataset)
-        self._print_summary(self.sts_dataset, 'total')
-        self._save_sts_dataset(self.sts_dataset, 'full')
-        train_dataset, dev_dataset, test_dataset = self._split_train_dataset()
-        self._print_summary(train_dataset, 'train')
-        self._save_sts_dataset(train_dataset, 'train')
-        self._print_summary(dev_dataset, 'dev')
-        self._save_sts_dataset(dev_dataset, 'dev')
-        self._print_summary(test_dataset, 'test')
-        self._save_sts_dataset(test_dataset, 'test')
-        self.work_progress.show('STS dataset has finished!')
+        self.progress.start_process()
+        for source_name in self.SOURCE_FILENAMES.keys():
+            self._read_annotated_dataset(source_name)
+            self._match_similar_sentences(source_name)
+            self._match_unsimilar_sentences(source_name)
+        self._save_results()
+        self.progress.finish_process()
 
-    def _read_annotated_dataset(self, filename):
-        self.work_progress.show('Reading annotated dataset')
-        annotated_filepath = PathUtil.build_path('resources', filename)
-        return self.dataset_manager.from_csv(annotated_filepath)
+    def _read_annotated_dataset(self, source_name):
+        filename = self.SOURCE_FILENAMES[source_name]
+        filepath = PathUtil.build_path('resources', filename)
+        self.source_dataset = self.sts_dataset.read(filepath)
 
-    def _get_groups_from_dataset(self, annotated_dataset, index):
-        group_fields = self.GROUP_FIELDS[index]
-        return annotated_dataset.groupby(group_fields)
-
-    def _match_similar_sentences(self, source, groups):
-        self.work_progress.show('Match similar sentences')
-        sts_dataset = pd.DataFrame(self.HEADER)
+    def _match_similar_sentences(self, source_name):
+        self.progress.section_header('SIMILAR SENTENCES')
+        groups = self.source_dataset.groupby(self.GROUP_FIELD)
         for group_name, group in groups:
-            self.work_progress.show(f'Processing group {group_name} with {len(group)} itens')
             pairs = list(pairwise(group.index))
             for pair in pairs:
                 sentence1 = group.loc[pair[0]]
                 sentence2 = group.loc[pair[1]]
-                item = self._create_item(source, group_name, sentence1, sentence2, similarity=1)
-                sts_dataset = sts_dataset.append(item, ignore_index=True)
-        return sts_dataset
+                self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=1)
+            self.progress.show(f'Itens: {len(group)}, Pairs: {len(pairs)}, Group: "{group_name}"')
+        self.progress.section_footer(self.sts_dataset.samples)
 
-    def _match_unsimilar_sentences(self, source, groups):
-        self.work_progress.show('Match unsimilar sentences')
-        sts_dataset = pd.DataFrame(self.HEADER)
-        group_pairs = list(pairwise(groups))
+    def _match_unsimilar_sentences(self, source_name):
+        self.progress.section_header('UNSIMILAR SENTENCES')
+        for index, row in self.source_dataset.iterrows():
+            sentence1 = row
+            group_name = row[self.GROUP_FIELD]
+            diff_group = self.source_dataset.query(f'{self.GROUP_FIELD} != "{group_name}"')
+            sentence2 = diff_group.sample()
+            self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=0)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    def _save_results(self):
+        self.sts_dataset.save_full('benchmark')
+
+
+class ScaleStsExporter:
+
+    def __init__(self):
+        self.progress = Progress()
+        self.sts_dataset = BinaryStsDataset()
+        self.source_dataset = None
+
+    def execute(self):
+        self.progress.start_process()
+        self._read_annotated_dataset()
+        self._process_same_discussion_sentences()
+        self._process_same_theme_sentences()
+        self._process_same_area_sentences()
+        self._process_diff_area_sentences()
+        self._save_results()
+        self.progress.finish_process()
+
+    def _read_annotated_dataset(self):
+        filepath = PathUtil.build_path('resources', FILENAME)
+        self.source_dataset = self.sts_dataset.read(filepath)
+
+    def _process_same_discussion_sentences(self):
+        self.progress.section_header('1) SAME DISCUSSION AND DIFFERENT EMENTAS')
+        discussion = self.source_dataset.groupby(['area', 'tema', 'discussao'])
+        for discussion_name, discussion in discussion:
+            self.progress.show(f'\t"{discussion_name[2]}" with {len(discussion)} itens')
+            pairs = list(pairwise(discussion.index))
+            for pair in pairs:
+                sentence1 = discussion.loc[pair[0]]
+                sentence2 = discussion.loc[pair[1]]
+                self.sts_dataset.add_sample(sentence1, sentence2, similarity=3)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    def _process_same_theme_sentences(self):
+        self.progress.section_header('2) SAME THEME AND DIFFERENT DISCUSSION')
+        areas = self.source_dataset.groupby(['area'])
+        for area_name, area in areas:
+            self.progress.show('')
+            self.progress.show(f'AREA: {area_name}')
+            themes = area.groupby(['tema'])
+            for theme_name, theme in themes:
+                self.progress.show(f'TEMA: {theme_name}')
+                discussions = theme.groupby(['discussao'])
+                discussions_pairs = list(pairwise(discussions))
+                self._add_group_pairs(discussions_pairs, similarity=2)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    def _process_same_area_sentences(self):
+        self.progress.section_header('3) SAME AREA AND DIFFERENT THEMES')
+        areas = self.source_dataset.groupby(['area'])
+        for area_name, area in areas:
+            themes = area.groupby(['tema'])
+            if len(themes) > 1:
+                self.progress.show('')
+                self.progress.show(f'AREA: {area_name}')
+                themes_pairs = list(pairwise(themes))
+                self._add_group_pairs(themes_pairs, similarity=1)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    def _process_diff_area_sentences(self):
+        self.progress.section_header('4) ANTAGONIC AREAS')
+        areas = self.source_dataset.groupby(['area'])
+        groups = {key: (key, group) for key, group in areas}
+        areas_pairs = [((area_name, area), self._get_antagonic_area(groups, area_name)) for area_name, area in areas]
+        self._add_group_pairs(areas_pairs, similarity=0)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    @staticmethod
+    def _get_antagonic_area(area_groups, area_name):
+        return area_groups[ANTAGONIC_AREAS[area_name]]
+
+    def _add_group_pairs(self, group_pairs, similarity):
         for group_pair in group_pairs:
-            group1_name = group_pair[0][0]
-            group1_data = group_pair[0][1]
-            group2_name = group_pair[1][0]
-            group2_data = group_pair[1][1]
-            self.work_progress.show(f'{group1_name} X {group2_name} ')
-            sentence_pairs = list(zip(group1_data.index, group2_data.index))
-            for pair in sentence_pairs:
-                sentence1 = group1_data.loc[pair[0]]
-                sentence2 = group2_data.loc[pair[1]]
-                item = self._create_item(source, group1_name, sentence1, sentence2, similarity=0)
-                sts_dataset = sts_dataset.append(item, ignore_index=True)
-            sentence_pairs = list(zip_offset(group1_data.index, group2_data.index, offsets=(0, 1), longest=False))
-            for pair in sentence_pairs:
-                sentence1 = group1_data.loc[pair[0]]
-                sentence2 = group2_data.loc[pair[1]]
-                item = self._create_item(source, group2_name, sentence1, sentence2, similarity=0)
-                sts_dataset = sts_dataset.append(item, ignore_index=True)
-        return sts_dataset
+            group_name1 = group_pair[0][0]
+            group_itens1 = group_pair[0][1]
+            group_name2 = group_pair[1][0]
+            group_itens2 = group_pair[1][1]
+            self.progress.show(f'\t "{group_name1}" X "{group_name2}"')
+            group_pairs = list(
+                zip_offset(group_itens1.index, group_itens2.index, offsets=(0, 1), longest=False))
+            for pair in group_pairs:
+                sentence1 = group_itens1.loc[pair[0]]
+                sentence2 = group_itens2.loc[pair[1]]
+                self.sts_dataset.add_sample(sentence1, sentence2, similarity=similarity)
 
-    def _create_item(self, source, keygroup, sentence1, sentence2, similarity):
-        assunto = keygroup
-        if type(keygroup) == tuple:
-            assunto = ' '.join(keygroup)
-        return {
-            'origem': source,
-            'assunto': assunto,
-            'ementa1': correct_spelling(sentence1[self.TEXT_FIELD]),
-            'ementa2': correct_spelling(sentence2[self.TEXT_FIELD]),
-            'similarity': similarity
-        }
+    def _save_results(self):
+        self.sts_dataset.save_splited('scale')
 
-    def _accumulate_dataset(self, dataset):
-        self.sts_dataset = self.sts_dataset.append(dataset, ignore_index=True)
 
-    def _split_train_dataset(self):
-        train_samples, alltest_samples = train_test_split(self.sts_dataset,
+class TripletAndBinaryStsExporter:
+    def __init__(self, is_triplet=True):
+        self.progress = Progress()
+        self.output_folder = 'triplet' if self.is_triplet else 'binary'
+        self.sts_dataset = TripletStsDataset() if is_triplet else BinaryStsDataset()
+        self.source_dataset = None
+
+    def execute(self):
+        self.progress.start_process()
+        self._read_annotated_dataset()
+        self._process_diff_area_sentences()
+        self._save_results()
+        self.progress.finish_process()
+
+    def _read_annotated_dataset(self):
+        filepath = PathUtil.build_path('resources', FILENAME)
+        self.source_dataset = self.sts_dataset.read(filepath)
+
+    def _process_diff_area_sentences(self):
+        self.progress.section_header('START TRIPLET GENERATION')
+        areas = self.source_dataset.groupby(['area'])
+        groups = {key: group for key, group in areas}
+        for area_name, area in areas:
+            antagonic_area_name = ANTAGONIC_AREAS[area_name]
+            antagonic_area = groups[antagonic_area_name]
+            discussion = area.groupby(['discussao'])
+            for discussion_name, discussion in discussion:
+                self._create_discussion_samples(antagonic_area, discussion, discussion_name)
+        self.progress.section_footer(self.sts_dataset.samples)
+
+    def _create_discussion_samples(self, antagonic_area, discussion, discussion_name):
+        indexes = discussion.index
+        pairs = list(combinations(indexes, 2) if len(indexes) < 30 else pairwise(indexes))
+        for pair in pairs:
+            base = discussion.loc[pair[0]]
+            similar = discussion.loc[pair[1]]
+            ramdom_id = random.choices(list(antagonic_area.index))[0]
+            unsimilar = self.source_dataset.loc[ramdom_id]
+            self.sts_dataset.add_sample(base, similar, unsimilar)
+        self.progress.show(f'Itens: {len(discussion)}, Pairs: {len(pairs)}, Discussion: "{discussion_name}"')
+
+    def _save_results(self):
+        self.sts_dataset.save_results(self.output_folder)
+
+
+class Progress:
+    def __init__(self):
+        self.work_progress = WorkProgress()
+        self.last_rows = 0
+
+    def show(self, msg):
+        self.work_progress.show(msg)
+
+    def start_process(self):
+        self.work_progress.show('Starting generation scale STS dataset')
+
+    def finish_process(self):
+        self.work_progress.show('Generation scale STS dataset has finished!')
+
+    def section_header(self, msg):
+        self.work_progress.show(100 * '-')
+        self.work_progress.show(msg)
+        self.work_progress.show(100 * '-')
+
+    def section_footer(self, dataset):
+        increment = len(dataset) - self.last_rows
+        self.work_progress.show(f'')
+        self.work_progress.show(f'Step add more {increment} rows')
+        self.work_progress.show('')
+        self.work_progress.show('')
+        self.work_progress.show('')
+        self.last_rows = len(dataset)
+
+
+class StsDataset(ABC):
+    def __init__(self):
+        self.dataset_manager = DatasetManager()
+        self.samples = self.create_instance()
+
+    @abstractmethod
+    def create_instance(self):
+        pass
+
+    def read(self, filepath):
+        return self.dataset_manager.from_csv(filepath)
+
+    def save_full(self, root_dir):
+        self._save(self.samples, root_dir, 'full.csv')
+
+    def save_splited(self, root_dir):
+        train_samples, dev_samples, test_samples = self._split_train()
+        self._save(train_samples, root_dir, 'train.csv')
+        self._save(dev_samples, root_dir, 'dev.csv')
+        self._save(test_samples, root_dir, 'test.csv')
+
+    def _save(self, dataset, root_dir, filename):
+        base_path = PathUtil.build_path('output', 'sts', root_dir)
+        Path(base_path).mkdir(parents=True, exist_ok=True)
+        filepath = PathUtil.join(base_path, filename)
+        self.dataset_manager.to_csv(dataset, filepath)
+
+    def _split_train(self):
+        train_samples, alltest_samples = train_test_split(self.samples,
                                                           train_size=0.70,
                                                           test_size=0.30,
                                                           random_state=103,
                                                           shuffle=True)
-        eval_samples, test_samples = train_test_split(alltest_samples,
-                                                      train_size=0.25,
-                                                      test_size=0.75,
-                                                      random_state=99,
-                                                      shuffle=True)
+        dev_samples, test_samples = train_test_split(alltest_samples,
+                                                     train_size=0.25,
+                                                     test_size=0.75,
+                                                     random_state=99,
+                                                     shuffle=True)
         train_samples = train_samples.reset_index(drop=True)
-        eval_samples = eval_samples.reset_index(drop=True)
+        dev_samples = dev_samples.reset_index(drop=True)
         test_samples = test_samples.reset_index(drop=True)
-        return train_samples, eval_samples, test_samples
+        return train_samples, dev_samples, test_samples
 
-    def _print_summary(self, dataset, name):
-        self.work_progress.show(f'')
-        self.work_progress.show(f'Dataset for {name}')
-        self.work_progress.show(f'Rows {len(dataset)}')
 
-    def _save_sts_dataset(self, dataset, name):
-        train_filepath = PathUtil.build_path('output', 'sts', f'{name}.csv')
-        self.work_progress.show(f'Saving STS dataset {train_filepath}')
-        self.dataset_manager.to_csv(dataset, train_filepath)
+class TripletStsDataset(StsDataset):
+    HEADER = {'ementa1': [], 'ementa2': [], 'ementa3': []}
+
+    def create_instance(self):
+        return pd.DataFrame(self.HEADER)
+
+    def add_sample(self, base, similar, unsimilar):
+        item = {
+            'ementa1': correct_spelling(base[TEXT_FIELD]),
+            'ementa2': correct_spelling(similar[TEXT_FIELD]),
+            'ementa3': correct_spelling(unsimilar[TEXT_FIELD])
+        }
+        self.samples = self.samples.append(item, ignore_index=True)
+
+
+class BinaryStsDataset(StsDataset):
+    HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
+
+    def create_instance(self):
+        return pd.DataFrame(self.HEADER)
+
+    def add_sample(self, base, similar, unsimilar):
+        item_similar = {
+            'ementa1': correct_spelling(base[TEXT_FIELD]),
+            'ementa2': correct_spelling(similar[TEXT_FIELD]),
+            'similarity': 1
+        }
+        item_unsimilar = {
+            'ementa1': correct_spelling(base[TEXT_FIELD]),
+            'ementa2': correct_spelling(unsimilar[TEXT_FIELD]),
+            'similarity': 0
+        }
+        self.samples = self.samples.append(item_similar, ignore_index=True)
+        self.samples = self.samples.append(item_unsimilar, ignore_index=True)
+
+
+class BenchmarkStsDataset(StsDataset):
+    HEADER = {'source': [], 'group': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
+
+    def create_instance(self):
+        return pd.DataFrame(self.HEADER)
+
+    def add_sample(self, source_name, group_name, sentence1, sentence2, similarity):
+        item = {
+            'source': source_name,
+            'group': group_name,
+            'ementa1': correct_spelling(sentence1[TEXT_FIELD]),
+            'ementa2': correct_spelling(sentence2[TEXT_FIELD]),
+            'similarity': similarity
+        }
+        self.samples = self.samples.append(item, ignore_index=True)

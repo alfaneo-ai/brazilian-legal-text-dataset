@@ -18,7 +18,7 @@ def parse_commands():
                         action='store',
                         default="binary",
                         type=str,
-                        help='Define STS type (binary, scale and triplet)')
+                        help='Define STS type (binary, scale, triplet and benchmark)')
 
     args = vars(parser.parse_args())
     return args['task'], args['sts_type']
