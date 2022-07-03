@@ -71,8 +71,9 @@ class BenchmarkStsExporter:
             sentence1 = row
             group_name = row[self.GROUP_FIELD]
             diff_group = self.source_dataset.query(f'{self.GROUP_FIELD} != "{group_name}"')
-            sentence2 = diff_group.sample(n=1, axis=0)
-            self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=0)
+            ramdom_id = random.choices(list(diff_group.index))[0]
+            unsimilar = self.source_dataset.loc[ramdom_id]
+            self.sts_dataset.add_sample(source_name, group_name, sentence1, unsimilar, similarity=0)
         self.progress.section_footer(self.sts_dataset.samples)
 
     def _save_results(self, source_name):
