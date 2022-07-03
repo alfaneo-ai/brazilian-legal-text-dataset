@@ -32,17 +32,22 @@ class BenchmarkStsExporter:
 
     def __init__(self):
         self.progress = Progress()
-        self.sts_dataset = BenchmarkStsDataset()
+        self.sts_dataset = None
         self.source_dataset = None
 
     def execute(self):
         self.progress.start_process()
         for source_name in self.SOURCE_FILENAMES.keys():
+            self._create_new_sts_dataset()
             self._read_annotated_dataset(source_name)
             self._match_similar_sentences(source_name)
             self._match_unsimilar_sentences(source_name)
-        self._save_results()
+            self._save_results(source_name)
         self.progress.finish_process()
+
+    def _create_new_sts_dataset(self):
+        self.sts_dataset = BenchmarkStsDataset()
+        self.progress.reset()
 
     def _read_annotated_dataset(self, source_name):
         filename = self.SOURCE_FILENAMES[source_name]
@@ -70,8 +75,8 @@ class BenchmarkStsExporter:
             self.sts_dataset.add_sample(source_name, group_name, sentence1, sentence2, similarity=0)
         self.progress.section_footer(self.sts_dataset.samples)
 
-    def _save_results(self):
-        self.sts_dataset.save_full('benchmark')
+    def _save_results(self, source_name):
+        self.sts_dataset.save_full('benchmark', f'{source_name}.csv')
 
 
 class ScaleStsExporter:
@@ -234,6 +239,9 @@ class Progress:
         self.work_progress.show('')
         self.last_rows = len(dataset)
 
+    def reset(self):
+        self.last_rows = 0
+
 
 class StsDataset(ABC):
     def __init__(self):
@@ -247,8 +255,8 @@ class StsDataset(ABC):
     def read(self, filepath):
         return self.dataset_manager.from_csv(filepath)
 
-    def save_full(self, root_dir):
-        self._save(self.samples, root_dir, 'full.csv')
+    def save_full(self, root_dir, name):
+        self._save(self.samples, root_dir, name)
 
     def save_splited(self, root_dir):
         train_samples, dev_samples, test_samples = self._split_train()
