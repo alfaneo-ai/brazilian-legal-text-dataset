@@ -260,10 +260,9 @@ class StsDataset(ABC):
         self._save(self.samples, root_dir, name)
 
     def save_splited(self, root_dir):
-        train_samples, dev_samples, test_samples = self._split_train()
+        train_samples, dev_samples = self._split_train()
         self._save(train_samples, root_dir, 'train.csv')
         self._save(dev_samples, root_dir, 'dev.csv')
-        self._save(test_samples, root_dir, 'test.csv')
 
     def _save(self, dataset, root_dir, filename):
         base_path = PathUtil.build_path('output', 'sts', root_dir)
@@ -272,20 +271,11 @@ class StsDataset(ABC):
         self.dataset_manager.to_csv(dataset, filepath)
 
     def _split_train(self):
-        train_samples, alltest_samples = train_test_split(self.samples,
-                                                          train_size=0.70,
-                                                          test_size=0.30,
-                                                          random_state=103,
-                                                          shuffle=True)
-        dev_samples, test_samples = train_test_split(alltest_samples,
-                                                     train_size=0.25,
-                                                     test_size=0.75,
-                                                     random_state=99,
-                                                     shuffle=True)
+        train_samples, dev_samples = train_test_split(self.samples, train_size=0.80, test_size=0.20, random_state=103,
+                                                      shuffle=True)
         train_samples = train_samples.reset_index(drop=True)
         dev_samples = dev_samples.reset_index(drop=True)
-        test_samples = test_samples.reset_index(drop=True)
-        return train_samples, dev_samples, test_samples
+        return train_samples, dev_samples
 
 
 class TripletStsDataset(StsDataset):
