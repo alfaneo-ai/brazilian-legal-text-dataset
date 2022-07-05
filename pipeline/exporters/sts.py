@@ -269,6 +269,7 @@ class StsDataset(ABC):
         Path(base_path).mkdir(parents=True, exist_ok=True)
         filepath = PathUtil.join(base_path, filename)
         self.dataset_manager.to_csv(dataset, filepath)
+        print(f'{filename} - {len(dataset)}')
 
     def _split_train(self):
         train_samples, dev_samples = train_test_split(self.samples, train_size=0.80, test_size=0.20, random_state=103,
