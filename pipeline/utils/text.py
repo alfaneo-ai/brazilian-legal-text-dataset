@@ -57,6 +57,10 @@ class TextUtil:
         return re.sub("", '', phrase)
 
     @staticmethod
+    def remove_elipsis(phrase):
+        return re.sub(r'\(\.\.\.\)', ' ', phrase)
+
+    @staticmethod
     def convert_elipsis_to_code(phrase):
         return re.sub(r'\(\.\.\.\)', '__ELIPSIS__', phrase)
 

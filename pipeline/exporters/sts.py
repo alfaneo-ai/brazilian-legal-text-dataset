@@ -1,15 +1,11 @@
 import random
-from abc import ABC, abstractmethod
 from itertools import combinations
-from pathlib import Path
 
-import pandas as pd
 from more_itertools import pairwise, zip_offset
-from sklearn.model_selection import train_test_split
 
-from pipeline.utils import WorkProgress, DatasetManager, PathUtil, correct_spelling
+from pipeline.utils import WorkProgress, PathUtil
+from .datasets import *
 
-TEXT_FIELD = 'ementa'
 GROUP_FIELDS = ['area', 'tema', 'discussao']
 FILENAME = 'pesquisas-prontas-stf.csv'
 ANTAGONIC_AREAS = {
@@ -24,10 +20,39 @@ ANTAGONIC_AREAS = {
 }
 
 
+class Progress:
+    def __init__(self):
+        self.work_progress = WorkProgress()
+        self.last_rows = 0
+
+    def show(self, msg):
+        self.work_progress.show(msg)
+
+    def start_process(self):
+        self.work_progress.show('Starting generation scale STS dataset')
+
+    def finish_process(self):
+        self.work_progress.show('Generation scale STS dataset has finished!')
+
+    def section_header(self, msg):
+        self.work_progress.show(100 * '-')
+        self.work_progress.show(msg)
+        self.work_progress.show(100 * '-')
+
+    def section_footer(self, dataset):
+        increment = len(dataset) - self.last_rows
+        self.work_progress.show(f'')
+        self.work_progress.show(f'Step add more {increment} rows')
+        self.work_progress.show('')
+        self.last_rows = len(dataset)
+
+    def reset(self):
+        self.last_rows = 0
+
+
 class BenchmarkStsExporter:
     GROUP_FIELD = 'assunto'
     SOURCE_FILENAMES = {'TJMS': 'pesquisas-prontas-tjms.csv',
-                        'STJ': 'pesquisas-prontas-stj.csv',
                         'PJERJ': 'pesquisas-prontas-pjerj.csv'}
 
     def __init__(self):
@@ -58,7 +83,7 @@ class BenchmarkStsExporter:
         self.progress.section_header(f'SOURCE: {source_name} - SIMILAR SENTENCES')
         groups = self.source_dataset.groupby(self.GROUP_FIELD)
         for group_name, group in groups:
-            pairs = list(pairwise(group.index))
+            pairs = list(combinations(group.index, 2))
             for pair in pairs:
                 sentence1 = group.loc[pair[0]]
                 sentence2 = group.loc[pair[1]]
@@ -71,9 +96,10 @@ class BenchmarkStsExporter:
             sentence1 = row
             group_name = row[self.GROUP_FIELD]
             diff_group = self.source_dataset.query(f'{self.GROUP_FIELD} != "{group_name}"')
-            ramdom_id = random.choices(list(diff_group.index))[0]
-            unsimilar = self.source_dataset.loc[ramdom_id]
-            self.sts_dataset.add_sample(source_name, group_name, sentence1, unsimilar, similarity=0)
+            random_ids = random.choices(list(diff_group.index), k=5)
+            unsimilars = [self.source_dataset.loc[random_id] for random_id in random_ids]
+            for unsimilar in unsimilars:
+                self.sts_dataset.add_sample(source_name, group_name, sentence1, unsimilar, similarity=0)
         self.progress.section_footer(self.sts_dataset.samples)
 
     def _save_results(self, source_name):
@@ -81,7 +107,6 @@ class BenchmarkStsExporter:
 
 
 class ScaleStsExporter:
-
     def __init__(self):
         self.progress = Progress()
         self.sts_dataset = ScaleStsDataset()
@@ -178,17 +203,19 @@ class TripletAndBinaryStsExporter:
 
     def execute(self):
         self.progress.start_process()
-        self._read_annotated_dataset()
+        self._read_annotated_dataset('pesquisas-prontas-stf.csv')
         self._process_diff_area_sentences()
+        self._read_annotated_dataset('pesquisas-prontas-stj.csv')
+        self._process_diff_assunto_sentences()
         self._save_results()
         self.progress.finish_process()
 
-    def _read_annotated_dataset(self):
-        filepath = PathUtil.build_path('resources', FILENAME)
+    def _read_annotated_dataset(self, source_name):
+        filepath = PathUtil.build_path('resources', source_name)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _process_diff_area_sentences(self):
-        self.progress.section_header('START TRIPLET GENERATION')
+        self.progress.section_header('START STF GENERATION')
         areas = self.source_dataset.groupby(['area'])
         groups = {key: group for key, group in areas}
         for area_name, area in areas:
@@ -201,7 +228,8 @@ class TripletAndBinaryStsExporter:
 
     def _create_discussion_samples(self, antagonic_area, discussion, discussion_name):
         indexes = discussion.index
-        pairs = list(combinations(indexes, 2) if len(indexes) < 30 else pairwise(indexes))
+        # pairs = list(combinations(indexes, 2) if len(indexes) < 30 else pairwise(indexes))
+        pairs = list(pairwise(indexes))
         for pair in pairs:
             base = discussion.loc[pair[0]]
             similar = discussion.loc[pair[1]]
@@ -210,138 +238,65 @@ class TripletAndBinaryStsExporter:
             self.sts_dataset.add_sample(base, similar, unsimilar)
         self.progress.show(f'Itens: {len(discussion)}, Pairs: {len(pairs)}, Discussion: "{discussion_name}"')
 
+    def _process_diff_assunto_sentences(self):
+        self.progress.section_header('START STJ GENERATION')
+        assuntos = self.source_dataset.groupby(['assunto'])
+        for assunto_name, assunto in assuntos:
+            diff_group = self.source_dataset.query(f'assunto != "{assunto_name}"')
+            pairs = list(pairwise(assunto.index))
+            for pair in pairs:
+                base = assunto.loc[pair[0]]
+                similar = assunto.loc[pair[1]]
+                random_id = random.choices(list(diff_group.index), k=1)[0]
+                unsimilar = self.source_dataset.loc[random_id]
+                self.sts_dataset.add_sample(base, similar, unsimilar)
+        self.progress.section_footer(self.sts_dataset.samples)
+
     def _save_results(self):
         self.sts_dataset.save_splited(self.output_folder)
+        self.progress.section_footer(self.sts_dataset.samples)
 
 
-class Progress:
+class BatchTripletStsExporter:
     def __init__(self):
-        self.work_progress = WorkProgress()
-        self.last_rows = 0
+        self.progress = Progress()
+        self.output_folder = 'batch_triplet'
+        self.sts_dataset = BatchTripletStsDataset()
+        self.source_dataset = None
+        self.group_index = 1
 
-    def show(self, msg):
-        self.work_progress.show(msg)
+    def execute(self):
+        self.progress.start_process()
+        self._read_annotated_dataset('pesquisas-prontas-stf.csv')
+        self._process_stf_sentences()
+        self._read_annotated_dataset('pesquisas-prontas-stj.csv')
+        self._process_stj_sentences()
+        self._save_results()
+        self.progress.finish_process()
 
-    def start_process(self):
-        self.work_progress.show('Starting generation scale STS dataset')
+    def _read_annotated_dataset(self, source_name):
+        filepath = PathUtil.build_path('resources', source_name)
+        self.source_dataset = self.sts_dataset.read(filepath)
 
-    def finish_process(self):
-        self.work_progress.show('Generation scale STS dataset has finished!')
+    def _process_stf_sentences(self):
+        self.progress.section_header('START STF GENERATION')
+        discussions = self.source_dataset.groupby(['discussao'])
+        for index, (discussion_name, discussion) in enumerate(discussions, start=self.group_index):
+            for row_id in list(discussion.index):
+                row = self.source_dataset.loc[row_id]
+                self.sts_dataset.add_sample(row, index)
+        self.group_index = index
+        self.progress.section_footer(self.sts_dataset.samples)
 
-    def section_header(self, msg):
-        self.work_progress.show(100 * '-')
-        self.work_progress.show(msg)
-        self.work_progress.show(100 * '-')
+    def _process_stj_sentences(self):
+        self.progress.section_header('START STJ GENERATION')
+        discussions = self.source_dataset.groupby(['assunto'])
+        for index, (discussion_name, discussion) in enumerate(discussions, start=self.group_index):
+            for row_id in list(discussion.index):
+                row = self.source_dataset.loc[row_id]
+                self.sts_dataset.add_sample(row, index)
+        self.progress.section_footer(self.sts_dataset.samples)
 
-    def section_footer(self, dataset):
-        increment = len(dataset) - self.last_rows
-        self.work_progress.show(f'')
-        self.work_progress.show(f'Step add more {increment} rows')
-        self.work_progress.show('')
-        self.last_rows = len(dataset)
-
-    def reset(self):
-        self.last_rows = 0
-
-
-class StsDataset(ABC):
-    def __init__(self):
-        self.dataset_manager = DatasetManager()
-        self.samples = self.create_instance()
-
-    @abstractmethod
-    def create_instance(self):
-        pass
-
-    def read(self, filepath):
-        return self.dataset_manager.from_csv(filepath)
-
-    def save_full(self, root_dir, name):
-        self._save(self.samples, root_dir, name)
-
-    def save_splited(self, root_dir):
-        train_samples, dev_samples = self._split_train()
-        self._save(train_samples, root_dir, 'train.csv')
-        self._save(dev_samples, root_dir, 'dev.csv')
-
-    def _save(self, dataset, root_dir, filename):
-        base_path = PathUtil.build_path('output', 'sts', root_dir)
-        Path(base_path).mkdir(parents=True, exist_ok=True)
-        filepath = PathUtil.join(base_path, filename)
-        self.dataset_manager.to_csv(dataset, filepath)
-        print(f'{filename} - {len(dataset)}')
-
-    def _split_train(self):
-        train_samples, dev_samples = train_test_split(self.samples, train_size=0.80, test_size=0.20, random_state=103,
-                                                      shuffle=True)
-        train_samples = train_samples.reset_index(drop=True)
-        dev_samples = dev_samples.reset_index(drop=True)
-        return train_samples, dev_samples
-
-
-class TripletStsDataset(StsDataset):
-    HEADER = {'ementa1': [], 'ementa2': [], 'ementa3': []}
-
-    def create_instance(self):
-        return pd.DataFrame(self.HEADER)
-
-    def add_sample(self, base, similar, unsimilar):
-        item = {
-            'ementa1': correct_spelling(base[TEXT_FIELD]),
-            'ementa2': correct_spelling(similar[TEXT_FIELD]),
-            'ementa3': correct_spelling(unsimilar[TEXT_FIELD])
-        }
-        self.samples = self.samples.append(item, ignore_index=True)
-
-
-class ScaleStsDataset(StsDataset):
-    HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
-
-    def create_instance(self):
-        return pd.DataFrame(self.HEADER)
-
-    def add_sample(self, sentence1, sentence2, similarity):
-        item = {
-            'ementa1': correct_spelling(sentence1[TEXT_FIELD]),
-            'ementa2': correct_spelling(sentence2[TEXT_FIELD]),
-            'similarity': similarity
-        }
-        self.samples = self.samples.append(item, ignore_index=True)
-
-
-class BinaryStsDataset(StsDataset):
-    HEADER = {'ementa1': [], 'ementa2': [], 'similarity': []}
-
-    def create_instance(self):
-        return pd.DataFrame(self.HEADER)
-
-    def add_sample(self, base, similar, unsimilar):
-        item_similar = {
-            'ementa1': correct_spelling(base[TEXT_FIELD]),
-            'ementa2': correct_spelling(similar[TEXT_FIELD]),
-            'similarity': 1
-        }
-        item_unsimilar = {
-            'ementa1': correct_spelling(base[TEXT_FIELD]),
-            'ementa2': correct_spelling(unsimilar[TEXT_FIELD]),
-            'similarity': 0
-        }
-        self.samples = self.samples.append(item_similar, ignore_index=True)
-        self.samples = self.samples.append(item_unsimilar, ignore_index=True)
-
-
-class BenchmarkStsDataset(StsDataset):
-    HEADER = {'source': [], 'group': [], 'ementa1': [], 'ementa2': [], 'similarity': []}
-
-    def create_instance(self):
-        return pd.DataFrame(self.HEADER)
-
-    def add_sample(self, source_name, group_name, sentence1, sentence2, similarity):
-        item = {
-            'source': source_name,
-            'group': group_name,
-            'ementa1': correct_spelling(str(sentence1[TEXT_FIELD])),
-            'ementa2': correct_spelling(str(sentence2[TEXT_FIELD])),
-            'similarity': similarity
-        }
-        self.samples = self.samples.append(item, ignore_index=True)
+    def _save_results(self):
+        self.sts_dataset.save_splited(self.output_folder)
+        self.progress.section_footer(self.sts_dataset.samples)

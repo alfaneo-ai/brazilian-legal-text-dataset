@@ -1,6 +1,6 @@
 from .mlm import MlmExporter
 from .query import QueyExporter
-from .sts import TripletAndBinaryStsExporter, ScaleStsExporter, BenchmarkStsExporter
+from .sts import TripletAndBinaryStsExporter, ScaleStsExporter, BenchmarkStsExporter, BatchTripletStsExporter
 
 query_exporter = QueyExporter()
 mlm_exporter = MlmExporter()
@@ -15,3 +15,5 @@ def sts_exporter(sts_type):
         return ScaleStsExporter()
     elif sts_type == 'benchmark':
         return BenchmarkStsExporter()
+    elif sts_type == 'batch_triplet':
+        return BatchTripletStsExporter()
