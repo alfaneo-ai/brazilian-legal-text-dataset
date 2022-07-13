@@ -53,7 +53,8 @@ class Progress:
 class BenchmarkStsExporter:
     GROUP_FIELD = 'assunto'
     SOURCE_FILENAMES = {'TJMS': 'pesquisas-prontas-tjms.csv',
-                        'PJERJ': 'pesquisas-prontas-pjerj.csv'}
+                        'PJERJ': 'pesquisas-prontas-pjerj.csv',
+                        'STJ': 'pesquisas-prontas-stj.csv'}
 
     def __init__(self):
         self.progress = Progress()
@@ -83,7 +84,7 @@ class BenchmarkStsExporter:
         self.progress.section_header(f'SOURCE: {source_name} - SIMILAR SENTENCES')
         groups = self.source_dataset.groupby(self.GROUP_FIELD)
         for group_name, group in groups:
-            pairs = list(combinations(group.index, 2))
+            pairs = list(pairwise(group.index))
             for pair in pairs:
                 sentence1 = group.loc[pair[0]]
                 sentence2 = group.loc[pair[1]]
