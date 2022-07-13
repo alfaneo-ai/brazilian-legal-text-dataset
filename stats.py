@@ -68,16 +68,16 @@ class StatisticsForDatasets:
 
     def execute(self):
         self.work_progress.show('Starting a MLM pipeline')
-        pjerj = self.dataset_manager.from_csv('resources/pesquisas-prontas-pjerj.csv')
+        pjerj = self.dataset_manager.from_csv('resources/raw/pesquisas_prontas_pjerj.csv')
         pjerj = pjerj['ementa'].tolist()
 
-        stf = self.dataset_manager.from_csv('resources/pesquisas-prontas-stf.csv')
+        stf = self.dataset_manager.from_csv('resources/raw/pesquisas_prontas_stf.csv')
         stf = stf['ementa'].tolist()
 
-        stj = self.dataset_manager.from_csv('resources/pesquisas-prontas-stj.csv')
+        stj = self.dataset_manager.from_csv('resources/raw/pesquisas_prontas_stj.csv')
         stj = stj['ementa'].tolist()
 
-        tjms = self.dataset_manager.from_csv('resources/pesquisas-prontas-tjms.csv')
+        tjms = self.dataset_manager.from_csv('resources/raw/pesquisas_prontas_tjms.csv')
         tjms = tjms['ementa'].tolist()
 
         mlm = self._read_mlm_file()
@@ -91,7 +91,7 @@ class StatisticsForDatasets:
     @staticmethod
     def _read_mlm_file():
         sentences = list()
-        filepath = PathUtil.build_path('output/mlm/corpus_train.txt')
+        filepath = PathUtil.build_path('resources/mlm/corpus_dev.txt')
         with open(filepath, 'rb') as fileinput:
             lines = fileinput.readlines()
             for line in lines:
