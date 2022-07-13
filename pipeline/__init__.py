@@ -1,4 +1,4 @@
-from .exporters import mlm_exporter, sts_exporter, query_exporter
+from .exporters import mlm_exporter, sts_exporter
 from .parsers import mlm_parsers, sts_parsers
 from .scrapers import mlm_scrapers, sts_scrapers
 from .utils import WorkProgress
@@ -36,13 +36,3 @@ class StsPipelineManager:
         if task in ['all', 'export']:
             sts_exporter(sts_type).execute()
         self.work_progress.show('STS Pipeline has finished!')
-
-
-class QueryPipelineManager:
-    def __init__(self):
-        self.work_progress = WorkProgress()
-
-    def execute(self):
-        self.work_progress.show('Starting a Query pipeline')
-        query_exporter.execute()
-        self.work_progress.show('Query Pipeline has finished!')

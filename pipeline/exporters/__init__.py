@@ -1,8 +1,6 @@
 from .mlm import MlmExporter
-from .query import QueyExporter
 from .sts import TripletAndBinaryStsExporter, ScaleStsExporter, BenchmarkStsExporter, BatchTripletStsExporter
 
-query_exporter = QueyExporter()
 mlm_exporter = MlmExporter()
 
 

@@ -8,15 +8,15 @@ from bs4 import BeautifulSoup
 
 from pipeline.utils import DirectoryUtil, PathUtil, DatasetManager, PdfReader, TextUtil, WorkProgress
 
-OUTPUT_DIRECTORY_PATH = 'output'
-RESOURCES_DIRECTORY_PATH = 'resources'
+OUTPUT_DIRECTORY_PATH = 'output/raw'
+RESOURCES_DIRECTORY_PATH = 'resources/raw'
 FILES_DIRECTORY_PATH = 'files'
-FILE_NAME = 'pesquisas-prontas-pjerj.pdf'
+FILE_NAME = 'pesquisas_prontas_pjerj.pdf'
 DIRECTORY_PATH = f'{OUTPUT_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}'
 COMPLETE_FILE_PATH = f'{OUTPUT_DIRECTORY_PATH}/{FILES_DIRECTORY_PATH}/{FILE_NAME}'
 METADATA = []
 HEADER = {'assunto': [], 'ementa': []}
-SPREAD_SHEET_NAME = 'pesquisas-prontas-pjerj.csv'
+SPREAD_SHEET_NAME = 'pesquisas_prontas_pjerj.csv'
 SEARCH_URL = 'http://www.tjrj.jus.br/web/guest/institucional/dir-gerais/dgcon/pesquisa-selecionada'
 
 
@@ -110,7 +110,8 @@ class PjerjPesquisaProntaScrapper:
     def __create_spreadsheet_dataset(self):
         dataframe = pd.DataFrame(HEADER)
         dataframe = dataframe.append(METADATA, ignore_index=True)
-        filepath = PathUtil.build_path(RESOURCES_DIRECTORY_PATH, SPREAD_SHEET_NAME)
+        basedir = PathUtil.build_path('output', 'raw')
+        filepath = PathUtil.join(basedir, SPREAD_SHEET_NAME)
         self.dataset_manager.to_csv(dataframe, filepath, index=False)
 
 

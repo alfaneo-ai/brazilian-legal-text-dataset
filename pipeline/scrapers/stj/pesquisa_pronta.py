@@ -1,4 +1,3 @@
-import logging
 import re
 
 import pandas as pd
@@ -79,7 +78,7 @@ class SearchMapper:
 class StjPesquisaProntaScraper(SearchMapper):
     def __init__(self):
         super(StjPesquisaProntaScraper, self).__init__()
-        self.rootpath = PathUtil.build_path('output', 'sts')
+        self.rootpath = PathUtil.build_path('output', 'raw')
         self.total_page = TotalPage()
         self.search_page = SearchPage()
         self.dataset_manager = DatasetManager()
@@ -102,7 +101,8 @@ class StjPesquisaProntaScraper(SearchMapper):
                 self.__get_metadata_from_page(subject)
                 self.search_page.execute(self.current_search_code, subject, self.current_page)
                 self.__increment_page_counters()
-        self.progress.show(f'Scrapper process {len(METADATA)} documents(s) and started writing "pesquisas-prontas-stj.csv"')
+        self.progress.show(
+            f'Scrapper process {len(METADATA)} documents(s) and started writing "pesquisas-prontas-stj.csv"')
         self.__create_spreasheet_dataset()
         self.progress.show(f'Scrapper STJ Selected Cases was successfully completed')
 
@@ -127,7 +127,8 @@ class StjPesquisaProntaScraper(SearchMapper):
     def __create_spreasheet_dataset(self):
         dataframe = pd.DataFrame(HEADER)
         dataframe = dataframe.append(METADATA, ignore_index=True)
-        filepath = PathUtil.build_path('resources', 'pesquisas-prontas-stj.csv')
+        basedir = PathUtil.build_path('output', 'raw')
+        filepath = PathUtil.join(basedir, 'pesquisas_prontas_stj.csv')
         self.dataset_manager.to_csv(dataframe, filepath, index=False)
 
 

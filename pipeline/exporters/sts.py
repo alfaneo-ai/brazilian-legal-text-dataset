@@ -1,5 +1,4 @@
 import random
-from itertools import combinations
 
 from more_itertools import pairwise, zip_offset
 
@@ -7,7 +6,7 @@ from pipeline.utils import WorkProgress, PathUtil
 from .datasets import *
 
 GROUP_FIELDS = ['area', 'tema', 'discussao']
-FILENAME = 'pesquisas-prontas-stf.csv'
+FILENAME = 'pesquisas_prontas_stf.csv'
 ANTAGONIC_AREAS = {
     'Direito Administrativo': 'Direito Processual Penal',
     'Direito Constitucional': 'Direito Processual Penal',
@@ -52,9 +51,9 @@ class Progress:
 
 class BenchmarkStsExporter:
     GROUP_FIELD = 'assunto'
-    SOURCE_FILENAMES = {'TJMS': 'pesquisas-prontas-tjms.csv',
-                        'PJERJ': 'pesquisas-prontas-pjerj.csv',
-                        'STJ': 'pesquisas-prontas-stj.csv'}
+    SOURCE_FILENAMES = {'TJMS': 'pesquisas_prontas_tjms.csv',
+                        'PJERJ': 'pesquisas_prontas_pjerj.csv',
+                        'STJ': 'pesquisas_prontas_stj.csv'}
 
     def __init__(self):
         self.progress = Progress()
@@ -77,7 +76,7 @@ class BenchmarkStsExporter:
 
     def _read_annotated_dataset(self, source_name):
         filename = self.SOURCE_FILENAMES[source_name]
-        filepath = PathUtil.build_path('resources', filename)
+        filepath = PathUtil.build_path('resources', 'raw', filename)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _match_similar_sentences(self, source_name):
@@ -124,7 +123,7 @@ class ScaleStsExporter:
         self.progress.finish_process()
 
     def _read_annotated_dataset(self):
-        filepath = PathUtil.build_path('resources', FILENAME)
+        filepath = PathUtil.build_path('resources', 'raw', FILENAME)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _process_same_discussion_sentences(self):
@@ -204,15 +203,15 @@ class TripletAndBinaryStsExporter:
 
     def execute(self):
         self.progress.start_process()
-        self._read_annotated_dataset('pesquisas-prontas-stf.csv')
+        self._read_annotated_dataset('pesquisas_prontas_stf.csv')
         self._process_diff_area_sentences()
-        self._read_annotated_dataset('pesquisas-prontas-stj.csv')
+        self._read_annotated_dataset('pesquisas_prontas_stj.csv')
         self._process_diff_assunto_sentences()
         self._save_results()
         self.progress.finish_process()
 
     def _read_annotated_dataset(self, source_name):
-        filepath = PathUtil.build_path('resources', source_name)
+        filepath = PathUtil.build_path('resources', 'raw', source_name)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _process_diff_area_sentences(self):
@@ -229,7 +228,6 @@ class TripletAndBinaryStsExporter:
 
     def _create_discussion_samples(self, antagonic_area, discussion, discussion_name):
         indexes = discussion.index
-        # pairs = list(combinations(indexes, 2) if len(indexes) < 30 else pairwise(indexes))
         pairs = list(pairwise(indexes))
         for pair in pairs:
             base = discussion.loc[pair[0]]
@@ -268,15 +266,15 @@ class BatchTripletStsExporter:
 
     def execute(self):
         self.progress.start_process()
-        self._read_annotated_dataset('pesquisas-prontas-stf.csv')
+        self._read_annotated_dataset('pesquisas_prontas_stf.csv')
         self._process_stf_sentences()
-        self._read_annotated_dataset('pesquisas-prontas-stj.csv')
+        self._read_annotated_dataset('pesquisas_prontas_stj.csv')
         self._process_stj_sentences()
         self._save_results()
         self.progress.finish_process()
 
     def _read_annotated_dataset(self, source_name):
-        filepath = PathUtil.build_path('resources', source_name)
+        filepath = PathUtil.build_path('resources', 'raw', source_name)
         self.source_dataset = self.sts_dataset.read(filepath)
 
     def _process_stf_sentences(self):
