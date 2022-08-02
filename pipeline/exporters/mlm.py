@@ -28,7 +28,7 @@ class MlmExporter:
 
     @staticmethod
     def _get_source_files():
-        source_path = PathUtil.build_path('output', 'mlm')
+        source_path = PathUtil.build_path('output', 'mlm', 'stf', 'iudicium', 'ementa')
         filepaths = PathUtil.get_files(source_path, '*.txt')
         return filepaths
 
